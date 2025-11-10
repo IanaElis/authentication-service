@@ -1,0 +1,14 @@
+services:
+  db_auth:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: alumni_auth_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: alumni
+    volumes:
+      - db_data_auth:/var/lib/postgresql/data
+    ports:
+      - "5442:5432"
+
+volumes:
+  db_data_auth:
