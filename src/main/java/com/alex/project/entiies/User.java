@@ -35,6 +35,16 @@ public class User extends PanacheEntityBase {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    public User(int id, String username, String password, Role role) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.role = role;
+    }
+
+    public User() {
+    }
+
     public int getId() {
         return id;
     }

@@ -10,10 +10,7 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
+import jakarta.ws.rs.core.*;
 
 
 @Path("/auth/login")
@@ -30,7 +27,15 @@ public class LoginController {
     @PermitAll
     public Response login(@Valid LoginDto loginDto) {
         String token = authService.login(loginDto);
-        return Response.ok(token).build();
+        NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+                .value(token)
+                .path("/")
+                .httpOnly(true)
+                .secure(false)
+                .maxAge(3600)
+                .sameSite(NewCookie.SameSite.LAX)
+                .build();
+        return Response.ok().cookie(jwtCookie).build();
     }
 
     @GET

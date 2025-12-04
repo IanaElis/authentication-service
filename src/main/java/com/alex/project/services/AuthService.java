@@ -29,7 +29,7 @@ public class AuthService {
             throw new SecurityException("Error");
         }
 
-        return jwtService.jwtGenerator(user.getUsername(), user.getPassword());
+        return jwtService.jwtGenerator(user.getUsername(), Role.USER);
     }
 
     @Transactional
@@ -45,6 +45,6 @@ public class AuthService {
 
         userRepository.persistAndFlush(user);
 
-        return jwtService.jwtGenerator(user.getUsername(), hashedPassword);
+        return jwtService.jwtGenerator(user.getUsername(), Role.USER);
     }
 }
