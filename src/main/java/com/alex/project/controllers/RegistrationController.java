@@ -12,6 +12,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 
 @Path("/auth")
@@ -28,6 +29,14 @@ public class RegistrationController {
     @PermitAll
     public Response register(@Valid RegistrationDto registrationDto) {
         String token = authService.registration(registrationDto);
-        return Response.ok(token).build();
+        NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+                .value(token)
+                .path("/")
+                .httpOnly(true)
+                .secure(false)
+                .maxAge(3600)
+                .sameSite(NewCookie.SameSite.LAX)
+                .build();
+        return Response.ok().cookie(jwtCookie).build();
     }
 }

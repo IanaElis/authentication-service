@@ -1,15 +1,19 @@
 package com.alex.project.controllers;
 
+import com.alex.project.entiies.Role;
+import com.alex.project.utils.JwtGenerator;
 import io.quarkus.oidc.UserInfo;
-import io.quarkus.oidc.client.OidcClient;
-import io.quarkus.security.User;
-import io.quarkus.security.credential.TokenCredential;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.NewCookie;
+import jakarta.ws.rs.core.Response;
 
-import static org.eclipse.microprofile.jwt.Claims.email;
+import java.net.URI;
 
 @Path("/auth/callback")
 public class WelcomeResource {
@@ -17,20 +21,27 @@ public class WelcomeResource {
     @Inject
     SecurityIdentity identity;
 
+    @Inject
+    JwtGenerator jwtGenerator;
+
     @GET
-    public String welcome() {
+    @Produces(MediaType.TEXT_HTML)
+    public Response callback(@QueryParam("code") String code, @QueryParam("state") String state) {
         UserInfo userInfo = identity.getAttribute("userinfo");
 
         String email = userInfo.getEmail();
 
-        if (email == null) {
-            email = (String) identity.getAttribute("preferred_username");
-        }
+        String token = jwtGenerator.jwtGenerator(email, Role.USER);
 
-        if (email == null) {
-            email = identity.getPrincipal().getName();
-        }
+        NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+                .value(token)
+                .path("/")
+                .httpOnly(true)
+                .secure(false)
+                .maxAge(3600)
+                .sameSite(NewCookie.SameSite.LAX)
+                .build();
 
-        return "Привет, " + email + "!";
+        return Response.seeOther(URI.create("http://localhost:5173")).cookie(jwtCookie).build();
     }
 }
