@@ -1,9 +1,7 @@
 package com.alex.project.controllers;
 
-import com.alex.project.dtos.LoginDto;
 import com.alex.project.dtos.RegistrationDto;
 import com.alex.project.services.AuthService;
-import com.alex.project.utils.JwtGenerator;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;

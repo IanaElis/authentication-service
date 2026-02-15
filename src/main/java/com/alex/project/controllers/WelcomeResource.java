@@ -1,7 +1,7 @@
 package com.alex.project.controllers;
 
 import com.alex.project.entiies.Role;
-import com.alex.project.utils.JwtGenerator;
+import com.alex.project.utils.JwtService;
 import io.quarkus.oidc.UserInfo;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
@@ -22,7 +22,7 @@ public class WelcomeResource {
     SecurityIdentity identity;
 
     @Inject
-    JwtGenerator jwtGenerator;
+    JwtService jwtGenerator;
 
     @GET
     @Produces(MediaType.TEXT_HTML)

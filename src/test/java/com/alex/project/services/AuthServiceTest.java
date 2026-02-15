@@ -1,20 +1,22 @@
 package com.alex.project.services;
 
 import com.alex.project.dtos.LoginDto;
+import com.alex.project.dtos.RegistrationDto;
 import com.alex.project.entiies.Role;
 import com.alex.project.entiies.User;
+import com.alex.project.exceptions.UserAlreadyExist;
+import com.alex.project.exceptions.UserNotFoundException;
 import com.alex.project.repositories.UserRepository;
-import com.alex.project.utils.JwtGenerator;
+import com.alex.project.utils.JwtService;
 import io.quarkus.elytron.security.common.BcryptUtil;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.MockitoAnnotations;
+import org.mockito.*;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 public class AuthServiceTest {
@@ -23,7 +25,7 @@ public class AuthServiceTest {
     UserRepository userRepository;
 
     @Mock
-    JwtGenerator tokenGenerator;
+    JwtService tokenGenerator;
 
     @InjectMocks
     AuthService authService;
@@ -32,24 +34,86 @@ public class AuthServiceTest {
         MockitoAnnotations.openMocks(this);
     }
 
-    @Test
-    void successLogin() {
-        User user = new User(1, "sashaporohnya76@gmail.com", "password123", Role.USER);
+    @Nested
+    class AuthServiceLoginTests{
+        @Test
+        void successLogin() {
+            User user = new User(1, "sashaporohnya76@gmail.com", "password123", Role.USER);
 
-        when(userRepository.findByUsername("sashaporohnya76@gmail.com")).thenReturn(Optional.of(user));
-        when(tokenGenerator.jwtGenerator(user.getUsername(), Role.USER)).thenReturn("token");
+            when(userRepository.findByUsername("sashaporohnya76@gmail.com")).thenReturn(Optional.of(user));
+            when(tokenGenerator.jwtGenerator(user.getUsername(), Role.USER)).thenReturn("token");
 
-        try (MockedStatic<BcryptUtil> mocked = mockStatic(BcryptUtil.class)) {
-            mocked.when(() -> BcryptUtil.matches("password123", user.getPassword())).thenReturn(true);
+            try (MockedStatic<BcryptUtil> mocked = mockStatic(BcryptUtil.class)) {
+                mocked.when(() -> BcryptUtil.matches("password123", user.getPassword())).thenReturn(true);
+
+                LoginDto loginDto = new LoginDto("sashaporohnya76@gmail.com", "password123");
+
+                String result = authService.login(loginDto);
+
+                assertEquals("token", result);
+
+                verify(userRepository).findByUsername("sashaporohnya76@gmail.com");
+                verify(tokenGenerator).jwtGenerator(user.getUsername(), Role.USER);
+            }
+        }
+
+        @Test
+        void invalidPassword() {
+            User user = new User(1, "sashaporohnya76@gmail.com", "password123", Role.USER);
+
+            when(userRepository.findByUsername("sashaporohnya76@gmail.com")).thenReturn(Optional.of(user));
+
+            try (MockedStatic<BcryptUtil> mocked = mockStatic(BcryptUtil.class)) {
+                mocked.when(() -> BcryptUtil.matches("password435", user.getPassword())).thenReturn(false);
+
+                LoginDto loginDto = new LoginDto("sashaporohnya76@gmail.com", "password123");
+
+                assertThrows(SecurityException.class, () -> authService.login(loginDto));
+            }
+        }
+
+        @Test
+        void emailDoesNotExist() {
+            when(userRepository.findByUsername("sashaporohnya76@gmail.com")).thenReturn(Optional.empty());
 
             LoginDto loginDto = new LoginDto("sashaporohnya76@gmail.com", "password123");
 
-            String result = authService.login(loginDto);
+            assertThrows(UserNotFoundException.class, () -> authService.login(loginDto));
+        }
+    }
 
-            assertEquals("token", result);
+    @Nested
+    class AuthServiceRegistrationTests{
+        @Test
+        void successRegistration(){
+            RegistrationDto registrationDto = new RegistrationDto("sashaporohnya76@gmail.com", "password123");
 
-            verify(userRepository).findByUsername("sashaporohnya76@gmail.com");
-            verify(tokenGenerator).jwtGenerator(user.getUsername(), Role.USER);
+            when(userRepository.findByUsername(registrationDto.getUsername())).thenReturn(Optional.empty());
+            when(tokenGenerator.jwtGenerator(registrationDto.getUsername(), Role.USER)).thenReturn("token");
+
+            try (MockedStatic<BcryptUtil> mocked = mockStatic(BcryptUtil.class)) {
+                mocked.when(() -> BcryptUtil.bcryptHash(registrationDto.getPassword())).thenReturn("hash");
+
+                String result = authService.registration(registrationDto);
+
+                assertEquals("token", result);
+
+                ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+                verify(userRepository).persistAndFlush(any());
+
+                verify(userRepository).findByUsername(registrationDto.getUsername());
+                mocked.verify(() -> BcryptUtil.bcryptHash(registrationDto.getPassword()));
+            }
+        }
+
+        @Test
+        void emailAlreadyExists(){
+            User user = new User(1, "sashaporohnya76@gmail.com", "password123", Role.USER);
+            RegistrationDto registrationDto = new RegistrationDto("sashaporohnya76@gmail.com", "password123");
+
+            when(userRepository.findByUsername(registrationDto.getUsername())).thenReturn(Optional.of(user));
+
+            assertThrows(UserAlreadyExist.class, () -> authService.registration(registrationDto));
         }
     }
 }

@@ -8,7 +8,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import java.time.Duration;
 
 @ApplicationScoped
-public class JwtGenerator {
+public class JwtService {
 
     @ConfigProperty(name = "mp.jwt.private-key.location")
     String privateKeyLocation;

@@ -7,7 +7,7 @@ import com.alex.project.entiies.User;
 import com.alex.project.exceptions.UserAlreadyExist;
 import com.alex.project.exceptions.UserNotFoundException;
 import com.alex.project.repositories.UserRepository;
-import com.alex.project.utils.JwtGenerator;
+import com.alex.project.utils.JwtService;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -19,7 +19,7 @@ public class AuthService {
     @Inject
     UserRepository userRepository;
     @Inject
-    JwtGenerator jwtService;
+    JwtService jwtService;
 
     public String login(LoginDto loginDto) {
         User user =
