@@ -1,5 +1,7 @@
 package com.alex.project.services;
 
+import com.alex.project.controllers.UserServiceClient;
+import com.alex.project.dtos.CreateProfileDto;
 import com.alex.project.dtos.LoginDto;
 import com.alex.project.dtos.RegistrationDto;
 import com.alex.project.entiies.Role;
@@ -12,6 +14,8 @@ import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 @ApplicationScoped
 public class AuthService {
@@ -20,6 +24,10 @@ public class AuthService {
     UserRepository userRepository;
     @Inject
     JwtService jwtService;
+
+    @Inject
+    @RestClient
+    UserServiceClient userServiceClient;
 
     public String login(LoginDto loginDto) {
         User user =
@@ -44,6 +52,14 @@ public class AuthService {
         user.setRole(Role.USER);
 
         userRepository.persistAndFlush(user);
+
+        CreateProfileDto createProfileDto = new CreateProfileDto(user.getUsername(), user.getId());
+
+        Response response = userServiceClient.createProfile(createProfileDto);
+
+        if (response.getStatus() >= 300) {
+            throw new RuntimeException("Profile creation failed");
+        }
 
         return jwtService.jwtGenerator(user.getUsername(), Role.USER);
     }

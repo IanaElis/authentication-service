@@ -13,7 +13,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 
-@Path("/auth")
+@Path("/auth/signup")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 @PermitAll
@@ -23,7 +23,7 @@ public class RegistrationController {
     AuthService authService;
 
     @POST
-    @Path("/signup")
+    @Path("/")
     @PermitAll
     public Response register(@Valid RegistrationDto registrationDto) {
         String token = authService.registration(registrationDto);
