@@ -106,6 +106,15 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-kafka-streams</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-client-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-client</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>

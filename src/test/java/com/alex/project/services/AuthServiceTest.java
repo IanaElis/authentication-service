@@ -1,5 +1,7 @@
 package com.alex.project.services;
 
+import com.alex.project.controllers.UserServiceClient;
+import com.alex.project.dtos.CreateProfileDto;
 import com.alex.project.dtos.LoginDto;
 import com.alex.project.dtos.RegistrationDto;
 import com.alex.project.entiies.Role;
@@ -9,6 +11,8 @@ import com.alex.project.exceptions.UserNotFoundException;
 import com.alex.project.repositories.UserRepository;
 import com.alex.project.utils.JwtService;
 import io.quarkus.elytron.security.common.BcryptUtil;
+import jakarta.transaction.Status;
+import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
@@ -27,6 +31,9 @@ public class AuthServiceTest {
     @Mock
     JwtService tokenGenerator;
 
+    @Mock
+    UserServiceClient userServiceClient;
+
     @InjectMocks
     AuthService authService;
 
@@ -38,7 +45,7 @@ public class AuthServiceTest {
     class AuthServiceLoginTests{
         @Test
         void successLogin() {
-            User user = new User(1, "sashaporohnya76@gmail.com", "password123", Role.USER);
+            User user = new User(1L, "sashaporohnya76@gmail.com", "password123", Role.USER);
 
             when(userRepository.findByUsername("sashaporohnya76@gmail.com")).thenReturn(Optional.of(user));
             when(tokenGenerator.jwtGenerator(user.getUsername(), Role.USER)).thenReturn("token");
@@ -59,7 +66,7 @@ public class AuthServiceTest {
 
         @Test
         void invalidPassword() {
-            User user = new User(1, "sashaporohnya76@gmail.com", "password123", Role.USER);
+            User user = new User(1L, "sashaporohnya76@gmail.com", "password123", Role.USER);
 
             when(userRepository.findByUsername("sashaporohnya76@gmail.com")).thenReturn(Optional.of(user));
 
@@ -87,12 +94,16 @@ public class AuthServiceTest {
         @Test
         void successRegistration(){
             RegistrationDto registrationDto = new RegistrationDto("sashaporohnya76@gmail.com", "password123");
+            CreateProfileDto createProfileDto = new CreateProfileDto("sashaporohnya76@gmail.com", 1L);
+            Response response = Response.ok().build();
+
 
             when(userRepository.findByUsername(registrationDto.getUsername())).thenReturn(Optional.empty());
             when(tokenGenerator.jwtGenerator(registrationDto.getUsername(), Role.USER)).thenReturn("token");
 
             try (MockedStatic<BcryptUtil> mocked = mockStatic(BcryptUtil.class)) {
                 mocked.when(() -> BcryptUtil.bcryptHash(registrationDto.getPassword())).thenReturn("hash");
+                when(userServiceClient.createProfile(any(CreateProfileDto.class))).thenReturn(response);
 
                 String result = authService.registration(registrationDto);
 
@@ -108,7 +119,7 @@ public class AuthServiceTest {
 
         @Test
         void emailAlreadyExists(){
-            User user = new User(1, "sashaporohnya76@gmail.com", "password123", Role.USER);
+            User user = new User(1L, "sashaporohnya76@gmail.com", "password123", Role.USER);
             RegistrationDto registrationDto = new RegistrationDto("sashaporohnya76@gmail.com", "password123");
 
             when(userRepository.findByUsername(registrationDto.getUsername())).thenReturn(Optional.of(user));

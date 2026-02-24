@@ -3,11 +3,14 @@ package com.alex.project.controllers;
 import com.alex.project.dtos.LoginDto;
 import com.alex.project.services.AuthService;
 import io.quarkus.security.Authenticated;
+import io.smallrye.jwt.auth.principal.JWTParser;
+import io.smallrye.jwt.auth.principal.ParseException;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 
 
 @Path("/auth/login")
@@ -19,11 +22,20 @@ public class LoginController {
     @Inject
     AuthService authService;
 
+    @Inject
+    JsonWebToken token;
+    @Inject
+    JWTParser parser;
+
+
     @POST
     @Path("/")
     @PermitAll
-    public Response login(@Valid LoginDto loginDto) {
+    public Response login(@Valid LoginDto loginDto) throws ParseException {
         String token = authService.login(loginDto);
+        JsonWebToken jwt = parser.parse(token);
+
+        String username = jwt.getSubject();
         NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
                 .value(token)
                 .path("/")
@@ -35,10 +47,10 @@ public class LoginController {
         return Response.ok().cookie(jwtCookie).build();
     }
 
-    @GET
-    @Path("/google")
-    @Authenticated
-    public Response login() {
-        throw new NotAuthorizedException("oidc");
-    }
+//    @GET
+//    @Path("/google")
+//    @Authenticated
+//    public Response login() {
+//        throw new NotAuthorizedException("oidc");
+//    }
 }
