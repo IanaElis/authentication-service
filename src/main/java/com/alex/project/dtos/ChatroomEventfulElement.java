@@ -9,8 +9,8 @@ public record ChatroomEventfulElement(
         String chatroomName,
         String messageContent,
         long lastChatMessageId,
-        UUID clientMessageId,
-        Instant activityTime
+        String clientMessageId,
+        String activityTime
 ) {
 }
 

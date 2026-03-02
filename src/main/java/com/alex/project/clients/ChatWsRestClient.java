@@ -8,16 +8,17 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 import java.util.List;
 
-@Path("http://localhost:8081/chat-ws-rest")
+@Path("/")
 @RegisterRestClient
 public interface ChatWsRestClient {
 
-    record UserJwtToRooms(String jwtToken, List<Integer> rooms){}
+    record UserJwtToRoom(String jwtToken, Integer rooms){}
 
     record ChatSideActionRequest(String requestType, String affected, Integer room){}
 
     @POST
-    Response subscribeToRooms(UserJwtToRooms request);
+    @Path("/subscribe-room")
+    Response subscribeToRoom(UserJwtToRoom request);
 
     @POST
     Response broadcastSideActionRequest(ChatSideActionRequest request); //update or archive

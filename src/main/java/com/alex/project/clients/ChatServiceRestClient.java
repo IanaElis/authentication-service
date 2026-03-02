@@ -9,37 +9,103 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 import java.time.Instant;
 import java.util.List;
-
-@Path("http://localhost:8083/chat")
+import java.util.Map;
+@Path("/")
 @RegisterRestClient
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public interface ChatServiceRestClient {
 
-    record ChatActionRequest(long requesterUserId, ChatMessageElement message) {}
+    public record MessageUpdateRequest(
+            long requesterUserId,
+            ChatMessageElement message,
+            String newMessage
+    ) {}
+
+    public record MessageRemoveRequest(
+            long requesterUserId,
+            ChatMessageElement message
+    ) {}
 
     @PUT
-    @Path("/archive")
-    Response archiveMessage (ChatActionRequest actionRequest);
+    @Path("/chat-messages/update")
+    Response updateMessage(MessageUpdateRequest request);
 
     @PUT
-    @Path("/update")
-    Response updateMessage(ChatActionRequest actionRequest);
+    @Path("/chat-messages/archive")
+    Response archiveMessage(MessageRemoveRequest request);
+
+    public record CreateChatroomRequest(
+            long requestingUserId,
+            String name
+    ) {}
+
+    @POST
+    @Path("/chatrooms/create")
+    Response createChatroom(CreateChatroomRequest request);
+
+    @PUT
+    @Path("/chatrooms/{chatroomId}/archive")
+    Response archiveChatroom(
+            @QueryParam("userId") long requestingUserId,
+            @PathParam("chatroomId") int chatroomId);
 
     @GET
-    @Path("/load-chats-sidebar")
-    List<ChatroomEventfulElement> loadChatroomEventfulElements(@QueryParam("userId") long userId,
-                                                               @QueryParam("latestEventTimeOnPage") Instant latestEventTimeOnPage,
-                                                               @QueryParam("latestChatroomIdOnPage") Integer latestChatroomIdOnPage,
-                                                               @QueryParam("latestChatMessageIdOnPage") Long latestChatMessageIdOnPage);
+    @Path("/chatrooms/{chatroomId}")
+    Response getChatroomOverview(
+            @QueryParam("userId") long requestingUserId,
+            @PathParam("chatroomId") int chatroomId);
 
+    @GET
+    @Path("/chatrooms/events")
+    List<ChatroomEventfulElement> loadChatroomEventfulElements(
+            @QueryParam("userId") long userId,
+            @QueryParam("latestEventTimeOnPage") String latestEventTimeOnPage,
+            @QueryParam("latestChatroomIdOnPage") Integer latestChatroomIdOnPage,
+            @QueryParam("latestChatMessageIdOnPage") Long latestChatMessageIdOnPage
+    );
 
+    public record AddUsersRequest(Map<Long, String> usersWithRoles) {}
 
+    public record UpdateRoleRequest(String updatedRole) {}
 
-    // send save request to rabbit, so not here
+    public record UpdateMembershipStatusRequest(String updatedStatus) {}
 
-    // but archive and update are different?
+    @GET
+    @Path("/chatroom-users/{chatroomId}/users")
+    Response getUsers(
+            @QueryParam("userId") long requestingUserId,
+            @QueryParam("oldestAdditionTimestamp") String oldestAdditionTimestamp,
+            @QueryParam("oldestAdditionId") Integer oldestAdditionId,
+            @PathParam("chatroomId") int chatroomId
+    );
 
-    // I can archive and delete, but also send broadcast after operation?
+    @POST
+    @Path("/chatroom-users/{chatroomId}/users")
+    Response addUsers(
+            @QueryParam("userId") long requestingUserId,
+            @PathParam("chatroomId") int chatroomId,
+            AddUsersRequest request
+    );
 
+    @PUT
+    @Path("/chatroom-users/{chatroomId}/users/{affectedUserId}/role")
+    Response changeUserRole(
+            @QueryParam("userId") long requestingUserId,
+            @PathParam("chatroomId") int chatroomId,
+            @PathParam("affectedUserId") long affectedUserId,
+            UpdateRoleRequest request
+    );
+
+    @PUT
+    @Path("/chatroom-users/{chatroomId}/users/membership-status")
+    Response changeUserMembershipStatus(
+            @QueryParam("userId") long requestingUserId,
+            @QueryParam("affectedUserId") long affectedUserId,
+            @PathParam("chatroomId") int chatroomId,
+            UpdateMembershipStatusRequest request
+    );
 }
+
+// send save request to rabbit, so not here
+
