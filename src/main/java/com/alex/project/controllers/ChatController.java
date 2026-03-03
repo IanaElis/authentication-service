@@ -2,38 +2,23 @@ package com.alex.project.controllers;
 
 import com.alex.project.clients.ChatServiceRestClient;
 import com.alex.project.clients.ChatWsRestClient;
-import com.alex.project.dtos.ChatMessageElement;
-import com.alex.project.dtos.ChatMessageSaveData;
-import com.alex.project.dtos.ChatroomEventfulElement;
-import com.alex.project.utils.JwtService;
-import io.quarkus.security.Authenticated;
-import io.quarkus.security.identity.SecurityIdentity;
-import io.smallrye.jwt.auth.principal.DefaultJWTParser;
-import io.smallrye.jwt.auth.principal.JWTParser;
+import com.alex.project.dtos.chat.ChatMessageElement;
+import com.alex.project.dtos.chat.ChatMessageSaveData;
+import com.alex.project.dtos.chat.ChatroomEventfulElement;
+import com.alex.project.dtos.chat.ChatroomOverview;
 import io.smallrye.mutiny.Multi;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.SecurityContext;
-import org.eclipse.microprofile.jwt.Claim;
+import jakarta.ws.rs.core.*;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
-import org.jboss.resteasy.reactive.RestCookie;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Path("/chat")
 @Produces(MediaType.APPLICATION_JSON)
@@ -59,40 +44,64 @@ public class ChatController {
 
     @GET
     @Path("/load-chatrooms")
-    public List<ChatroomEventfulElement> loadChatrooms(
+    public List<ChatroomEventfulElement> loadChatroomEventfulElements(
             @QueryParam("latestChatroomId") Integer latestChatroomId,
             @QueryParam("latestChatMessageId") Long latestChatMessageId,
             @QueryParam("latestEventTime") String latestEventTime
     ) {
 
         String jwtToken = token.getRawToken();
-
-        log.info("JWT token AAAA string: {}", jwtToken);
-        log.info("JWT token BBBB token: {}", token.toString());
         var userId = token.getClaim("userid");
-        log.info("JWT userid claim CCCC: {}", userId.toString());
 
-        List<ChatroomEventfulElement> list = chatServiceRestClient.loadChatroomEventfulElements(
-                Long.parseLong(userId.toString()),
-                latestEventTime,
-                latestChatroomId,
-                latestChatMessageId);
-
-        List<Integer> chatroomIds = list.stream().map(ChatroomEventfulElement::chatroomId).toList();
-
-        if(chatWsRestClient.subscribeToRooms(
-                new ChatWsRestClient.UserJwtToRooms(jwtToken, chatroomIds))
-                .getStatus() == Response.Status.OK.getStatusCode()) {
-            return list;
+        try {
+            return chatServiceRestClient.loadChatroomEventfulElements(
+                    Long.parseLong(userId.toString()),
+                    latestEventTime,
+                    latestChatroomId,
+                    latestChatMessageId);
+        } catch (RuntimeException e) {
+            log.error(e.getMessage());
+            throw new BadRequestException(e.getMessage());
+//            return Response.status(Response.Status.BAD_REQUEST).build();
         }
-
-        if(log.isDebugEnabled()) {
-            log.warn("Unable to load chatrooms for user {}", userId);
-        }
-        return new ArrayList<>();
-
     }
 
+    @POST
+    @Path("/subscribe-chatrooms")
+    public Response subscribeUserToChatrooms()
+    {
+        long userId = token.getClaim("userid");
+
+        List<Integer> roomsResponse = chatServiceRestClient.getChatroomIdsByUserId(userId);
+
+        if(chatWsRestClient.subscribeToRooms(
+                new ChatWsRestClient.UserIdToRoomsByResponse(userId, roomsResponse))
+                .getStatus() == Response.Status.OK.getStatusCode()) {
+            return Response.ok().build();
+        }
+
+        return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+
+    @POST
+    @Path("/subscribe-chatrooms/{chatroom-id}")
+    // this is called if a new chatroom was made
+    public Response subscribeUserToChatroom(
+            @PathParam("chatroom-id") int chatroomId) {
+        long userId = token.getClaim("userid");
+
+        if(chatWsRestClient.subscribeToRooms(
+                        new ChatWsRestClient.UserIdToRoomsByResponse(
+                                userId,
+                                List.of(chatroomId))
+                ).getStatus() == Response.Status.OK.getStatusCode()) {
+            return Response.ok().build();
+        }
+
+        return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+
+    // called by send message request, lifts up for all users that have the room
     @POST
     @Path("/send-message")
     public void sendMessage(ChatMessageSaveData chatMessageSaveData) {
@@ -113,11 +122,29 @@ public class ChatController {
                 new ChatServiceRestClient.MessageUpdateRequest(
                         userId,
                         request.message(),
+                        request.chatroomId(),
                         request.newMessage()
                 );
 
-        return chatServiceRestClient.updateMessage(enriched);
+        if(chatServiceRestClient.updateMessage(enriched).getStatus() != Response.Status.OK.getStatusCode()) {
+            log.error("Unable to process ChatMessage Update: {}", enriched.toString());
+            throw new BadRequestException();
+        }
+
+        if(chatWsRestClient.broadcastMessageUpdate(
+                new ChatWsRestClient.ChangeMessageStateEvent(
+                        request.message().uuid(),
+                        request.chatroomId(),
+                        request.newMessage()))
+                .getStatus() != Response.Status.OK.getStatusCode()) {
+            log.error("Unable to broadcast message update result: {}", enriched.toString());
+            throw new BadRequestException();
+        }
+
+        return Response.ok().build();
     }
+
+
 
     @PUT
     @Path("/messages/archive")
@@ -127,16 +154,31 @@ public class ChatController {
         ChatServiceRestClient.MessageRemoveRequest enriched =
                 new ChatServiceRestClient.MessageRemoveRequest(
                         userId,
+                        request.chatroomId(),
                         request.message()
                 );
 
-        return chatServiceRestClient.archiveMessage(enriched);
-    }
+        if(chatServiceRestClient.archiveMessage(enriched).getStatus() != Response.Status.OK.getStatusCode()) {
+            log.error("Unable to Archive ChatMessage : {}", enriched.toString());
+            throw new BadRequestException();
+        }
 
+        if(chatWsRestClient.broadcastMessageUpdate(
+                        new ChatWsRestClient.ChangeMessageStateEvent(
+                                request.message().uuid(),
+                                request.chatroomId(),
+                                null))
+                .getStatus() != Response.Status.OK.getStatusCode()) {
+            log.error("Unable to broadcast message archive result: {}", enriched.toString());
+            throw new BadRequestException();
+        }
+
+        return Response.ok().build();
+    }
 
     @POST
     @Path("/chatrooms")
-    public Response createChatroom(ChatServiceRestClient.CreateChatroomRequest request) {
+    public Integer createChatroom(ChatServiceRestClient.CreateChatroomRequest request) {
         long userId = token.getClaim("userid");
 
         ChatServiceRestClient.CreateChatroomRequest enriched =
@@ -157,11 +199,10 @@ public class ChatController {
 
     @GET
     @Path("/chatrooms/{chatroomId}")
-    public Response getChatroomOverview(@PathParam("chatroomId") int chatroomId) {
+    public ChatroomOverview getChatroomOverview(@PathParam("chatroomId") int chatroomId) {
         long userId = token.getClaim("userid");
         return chatServiceRestClient.getChatroomOverview(userId, chatroomId);
     }
-
 
     @GET
     @Path("/chatrooms/{chatroomId}/users")
@@ -184,15 +225,29 @@ public class ChatController {
     @Path("/chatrooms/{chatroomId}/users")
     public Response addUsers(
             @PathParam("chatroomId") int chatroomId,
-            ChatServiceRestClient.AddUsersRequest request
-    ) {
+            ChatServiceRestClient.AddUsersRequest request) {
+
         long userId = token.getClaim("userid");
 
-        return chatServiceRestClient.addUsers(
+        if(chatServiceRestClient.addUsers(
                 userId,
                 chatroomId,
-                request
-        );
+                request).getStatus()
+                == Response.Status.OK.getStatusCode()) {
+
+            if(chatWsRestClient.broadcastChatroomUserAddition(
+                    new ChatWsRestClient
+                            .ChatroomUserAddEvent(
+                                    chatroomId,
+                            request.usersWithRoles()
+                                    .keySet()
+                                    .stream()
+                                    .toList())).getStatus()
+                    == Response.Status.OK.getStatusCode()) {
+                return Response.ok().build();
+            }
+        }
+        return Response.status(Response.Status.BAD_REQUEST).build();
     }
 
     @PUT
