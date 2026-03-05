@@ -1,7 +1,4 @@
-package com.alex.project.dtos;
-
-import java.time.Instant;
-import java.util.UUID;
+package com.alex.project.dtos.chat;
 
 public record ChatroomEventfulElement(
         long userId,

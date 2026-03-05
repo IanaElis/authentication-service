@@ -1,4 +1,4 @@
-package com.alex.project.dtos;
+package com.alex.project.dtos.chat;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.validation.constraints.NotBlank;

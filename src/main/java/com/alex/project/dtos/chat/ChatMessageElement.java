@@ -1,4 +1,4 @@
-package com.alex.project.dtos;
+package com.alex.project.dtos.chat;
 
 import java.time.Instant;
 

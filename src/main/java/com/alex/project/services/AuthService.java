@@ -1,6 +1,6 @@
 package com.alex.project.services;
 
-import com.alex.project.controllers.UserServiceClient;
+//import com.alex.project.controllers.UserServiceClient;
 import com.alex.project.dtos.CreateProfileDto;
 import com.alex.project.dtos.LoginDto;
 import com.alex.project.dtos.RegistrationDto;
@@ -24,10 +24,10 @@ public class AuthService {
     UserRepository userRepository;
     @Inject
     JwtService jwtService;
-
-    @Inject
-    @RestClient
-    UserServiceClient userServiceClient;
+//
+//    @Inject
+//    @RestClient
+//    UserServiceClient userServiceClient;
 
     public String login(LoginDto loginDto) {
         User user =
@@ -37,7 +37,7 @@ public class AuthService {
             throw new SecurityException("Error");
         }
 
-        return jwtService.jwtGenerator(user.getUsername(), Role.USER);
+        return jwtService.jwtGenerator(user.getUsername(), Role.USER, user.getId());
     }
 
     @Transactional
@@ -45,6 +45,7 @@ public class AuthService {
         if(userRepository.findByUsername(registrationDto.getUsername()).isPresent()) {
             throw new UserAlreadyExist("Username already exist");
         }
+
         User user = new User();
         user.setUsername(registrationDto.getUsername());
         String hashedPassword = BcryptUtil.bcryptHash(registrationDto.getPassword());
@@ -55,12 +56,12 @@ public class AuthService {
 
         CreateProfileDto createProfileDto = new CreateProfileDto(user.getUsername(), user.getId());
 
-        Response response = userServiceClient.createProfile(createProfileDto);
+//        Response response = userServiceClient.createProfile(createProfileDto);
 
-        if (response.getStatus() >= 300) {
-            throw new RuntimeException("Profile creation failed");
-        }
+//        if (response.getStatus() >= 300) {
+//            throw new RuntimeException("Profile creation failed");
+//        }
 
-        return jwtService.jwtGenerator(user.getUsername(), Role.USER);
+        return jwtService.jwtGenerator(user.getUsername(), Role.USER, user.getId());
     }
 }

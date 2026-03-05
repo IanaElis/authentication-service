@@ -1,6 +1,6 @@
 package com.alex.project.services;
 
-import com.alex.project.controllers.UserServiceClient;
+//import com.alex.project.controllers.UserServiceClient;
 import com.alex.project.dtos.CreateProfileDto;
 import com.alex.project.dtos.LoginDto;
 import com.alex.project.dtos.RegistrationDto;
@@ -30,9 +30,9 @@ public class AuthServiceTest {
 
     @Mock
     JwtService tokenGenerator;
-
-    @Mock
-    UserServiceClient userServiceClient;
+//
+//    @Mock
+//    UserServiceClient userServiceClient;
 
     @InjectMocks
     AuthService authService;
@@ -48,7 +48,7 @@ public class AuthServiceTest {
             User user = new User(1L, "sashaporohnya76@gmail.com", "password123", Role.USER);
 
             when(userRepository.findByUsername("sashaporohnya76@gmail.com")).thenReturn(Optional.of(user));
-            when(tokenGenerator.jwtGenerator(user.getUsername(), Role.USER)).thenReturn("token");
+            when(tokenGenerator.jwtGenerator(user.getUsername(), Role.USER, user.getId())).thenReturn("token");
 
             try (MockedStatic<BcryptUtil> mocked = mockStatic(BcryptUtil.class)) {
                 mocked.when(() -> BcryptUtil.matches("password123", user.getPassword())).thenReturn(true);
@@ -60,7 +60,7 @@ public class AuthServiceTest {
                 assertEquals("token", result);
 
                 verify(userRepository).findByUsername("sashaporohnya76@gmail.com");
-                verify(tokenGenerator).jwtGenerator(user.getUsername(), Role.USER);
+                verify(tokenGenerator).jwtGenerator(user.getUsername(), Role.USER, user.getId());
             }
         }
 
@@ -97,19 +97,21 @@ public class AuthServiceTest {
             CreateProfileDto createProfileDto = new CreateProfileDto("sashaporohnya76@gmail.com", 1L);
             Response response = Response.ok().build();
 
-
             when(userRepository.findByUsername(registrationDto.getUsername())).thenReturn(Optional.empty());
-            when(tokenGenerator.jwtGenerator(registrationDto.getUsername(), Role.USER)).thenReturn("token");
 
             try (MockedStatic<BcryptUtil> mocked = mockStatic(BcryptUtil.class)) {
                 mocked.when(() -> BcryptUtil.bcryptHash(registrationDto.getPassword())).thenReturn("hash");
-                when(userServiceClient.createProfile(any(CreateProfileDto.class))).thenReturn(response);
+//                when(userServiceClient.createProfile(any(CreateProfileDto.class))).thenReturn(response);
 
                 String result = authService.registration(registrationDto);
 
                 assertEquals("token", result);
 
                 ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+
+                when(tokenGenerator.jwtGenerator(registrationDto.getUsername(),
+                        Role.USER, captor.capture().getId())).thenReturn("token");
+
                 verify(userRepository).persistAndFlush(any());
 
                 verify(userRepository).findByUsername(registrationDto.getUsername());

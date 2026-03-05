@@ -1,13 +1,15 @@
 package com.alex.project.clients;
 
-import com.alex.project.dtos.ChatMessageElement;
-import com.alex.project.dtos.ChatroomEventfulElement;
+import com.alex.project.dtos.ContentPage;
+import com.alex.project.dtos.chat.ChatMessageElement;
+import com.alex.project.dtos.chat.ChatroomEventfulElement;
+import com.alex.project.dtos.chat.ChatroomOverview;
+import com.alex.project.dtos.chat.ChatroomUserDetails;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 @Path("/")
@@ -19,11 +21,13 @@ public interface ChatServiceRestClient {
     public record MessageUpdateRequest(
             long requesterUserId,
             ChatMessageElement message,
+            int chatroomId,
             String newMessage
     ) {}
 
     public record MessageRemoveRequest(
             long requesterUserId,
+            int chatroomId,
             ChatMessageElement message
     ) {}
 
@@ -40,9 +44,17 @@ public interface ChatServiceRestClient {
             String name
     ) {}
 
+    @GET
+    @Path("/chat-messages/page")
+    ContentPage<ChatMessageElement> getMessagePage(@QueryParam("requesterUserId") long requesterUserId, // data retrieval, req-resp not ok
+                                                   @QueryParam("chatroomId") int chatroomId,
+                                                   @QueryParam("oldestTimestamp") String oldestTimestamp,
+                                                   @QueryParam("oldestId") Integer oldestId);
+
+
     @POST
     @Path("/chatrooms/create")
-    Response createChatroom(CreateChatroomRequest request);
+    Integer createChatroom(CreateChatroomRequest request);
 
     @PUT
     @Path("/chatrooms/{chatroomId}/archive")
@@ -52,7 +64,7 @@ public interface ChatServiceRestClient {
 
     @GET
     @Path("/chatrooms/{chatroomId}")
-    Response getChatroomOverview(
+    ChatroomOverview getChatroomOverview(
             @QueryParam("userId") long requestingUserId,
             @PathParam("chatroomId") int chatroomId);
 
@@ -64,6 +76,17 @@ public interface ChatServiceRestClient {
             @QueryParam("latestChatroomIdOnPage") Integer latestChatroomIdOnPage,
             @QueryParam("latestChatMessageIdOnPage") Long latestChatMessageIdOnPage
     );
+
+    @GET
+    @Path("/chatrooms/events/{chatroom-id}")
+    ChatroomEventfulElement getChatroomEventfulElementById(
+            @PathParam("chatroom-id") int chatroomId,
+            @QueryParam("userId") long userId
+    );
+
+    @GET
+    @Path("/chatrooms/id/{user-id}")
+    List<Integer> getChatroomIdsByUserId(@PathParam("user-id") long userId);
 
     public record AddUsersRequest(Map<Long, String> usersWithRoles) {}
 
@@ -106,6 +129,4 @@ public interface ChatServiceRestClient {
             UpdateMembershipStatusRequest request
     );
 }
-
-// send save request to rabbit, so not here
 

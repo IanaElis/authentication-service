@@ -1,6 +1,8 @@
 package com.alex.project.clients;
 
-import io.smallrye.mutiny.Uni;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
@@ -12,15 +14,29 @@ import java.util.List;
 @RegisterRestClient
 public interface ChatWsRestClient {
 
-    record UserJwtToRoom(String jwtToken, Integer rooms){}
+    record UserIdToRoomsByResponse(
+            @NotNull Long id,
+            List<Integer> roomsResponse) {}
 
-    record ChatSideActionRequest(String requestType, String affected, Integer room){}
+    record ChangeMessageStateEvent(
+            @NotNull String clientMessageId,
+            @Positive int chatroomId,
+            String updatedContent) {}
+
+    record ChatroomUserAddEvent(
+            @Positive int chatroomId,
+            @NotEmpty List<Long> usersAdded) {}
 
     @POST
-    @Path("/subscribe-room")
-    Response subscribeToRoom(UserJwtToRoom request);
+    @Path("/subscribe-rooms")
+    Response subscribeToRooms(UserIdToRoomsByResponse request);
 
     @POST
-    Response broadcastSideActionRequest(ChatSideActionRequest request); //update or archive
+    @Path("/message-state-update")
+    Response broadcastMessageUpdate(ChangeMessageStateEvent event);
+
+    @POST
+    @Path("/new-chatroom-broadcast")
+    Response broadcastChatroomUserAddition(ChatroomUserAddEvent event);
 
 }
