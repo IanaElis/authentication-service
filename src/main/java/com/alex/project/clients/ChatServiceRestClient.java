@@ -5,6 +5,7 @@ import com.alex.project.dtos.chat.ChatMessageElement;
 import com.alex.project.dtos.chat.ChatroomEventfulElement;
 import com.alex.project.dtos.chat.ChatroomOverview;
 import com.alex.project.dtos.chat.ChatroomUserDetails;
+import jakarta.validation.constraints.Positive;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -12,17 +13,16 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 import java.util.List;
 import java.util.Map;
-@Path("/")
+
 @RegisterRestClient
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public interface ChatServiceRestClient {
 
-    public record MessageUpdateRequest(
-            long requesterUserId,
-            ChatMessageElement message,
-            int chatroomId,
-            String newMessage
+    public record MessageUpdateRequest(long requesterUserId,
+                                       int chatroomId,
+                                       ChatMessageElement message,
+                                       String newMessage
     ) {}
 
     public record MessageRemoveRequest(
@@ -46,10 +46,11 @@ public interface ChatServiceRestClient {
 
     @GET
     @Path("/chat-messages/page")
-    ContentPage<ChatMessageElement> getMessagePage(@QueryParam("requesterUserId") long requesterUserId, // data retrieval, req-resp not ok
+    ContentPage<ChatMessageElement> getMessagePage(@QueryParam("requesterUserId") long requesterUserId, // data retrieval, req-req-resp not ok
                                                    @QueryParam("chatroomId") int chatroomId,
                                                    @QueryParam("oldestTimestamp") String oldestTimestamp,
-                                                   @QueryParam("oldestId") Integer oldestId);
+                                                   @QueryParam("oldestId") Integer oldestId,
+                                                   @QueryParam("requestForOlder") boolean requestForOlder);
 
 
     @POST
@@ -60,17 +61,19 @@ public interface ChatServiceRestClient {
     @Path("/chatrooms/{chatroomId}/archive")
     Response archiveChatroom(
             @QueryParam("userId") long requestingUserId,
-            @PathParam("chatroomId") int chatroomId);
+            @PathParam("chatroomId") int chatroomId
+    );
 
     @GET
     @Path("/chatrooms/{chatroomId}")
     ChatroomOverview getChatroomOverview(
             @QueryParam("userId") long requestingUserId,
-            @PathParam("chatroomId") int chatroomId);
+            @PathParam("chatroomId") int chatroomId
+    );
 
     @GET
     @Path("/chatrooms/events")
-    List<ChatroomEventfulElement> loadChatroomEventfulElements(
+    ContentPage<ChatroomEventfulElement> loadChatroomEventfulElements(
             @QueryParam("userId") long userId,
             @QueryParam("latestEventTimeOnPage") String latestEventTimeOnPage,
             @QueryParam("latestChatroomIdOnPage") Integer latestChatroomIdOnPage,
@@ -78,15 +81,8 @@ public interface ChatServiceRestClient {
     );
 
     @GET
-    @Path("/chatrooms/events/{chatroom-id}")
-    ChatroomEventfulElement getChatroomEventfulElementById(
-            @PathParam("chatroom-id") int chatroomId,
-            @QueryParam("userId") long userId
-    );
-
-    @GET
-    @Path("/chatrooms/id/{user-id}")
-    List<Integer> getChatroomIdsByUserId(@PathParam("user-id") long userId);
+    @Path("/user")
+    List<Integer> getChatroomIdsForUser(@QueryParam("userId") long requestingUserId);
 
     public record AddUsersRequest(Map<Long, String> usersWithRoles) {}
 
@@ -94,9 +90,11 @@ public interface ChatServiceRestClient {
 
     public record UpdateMembershipStatusRequest(String updatedStatus) {}
 
+    public record UpdateLastReadStateRequest(long newLastReadState) {}
+
     @GET
     @Path("/chatroom-users/{chatroomId}/users")
-    Response getUsers(
+    ContentPage<ChatroomUserDetails> getUsers(
             @QueryParam("userId") long requestingUserId,
             @QueryParam("oldestAdditionTimestamp") String oldestAdditionTimestamp,
             @QueryParam("oldestAdditionId") Integer oldestAdditionId,
@@ -128,5 +126,30 @@ public interface ChatServiceRestClient {
             @PathParam("chatroomId") int chatroomId,
             UpdateMembershipStatusRequest request
     );
+
+    @PUT
+    @Path("/chatroom-users/{chatroomId}/users/update-last-read")
+    Response updateLastRead(
+            @PathParam("chatroomId") int chatroomId,
+            @QueryParam("userId") long userId,
+            UpdateLastReadStateRequest request
+    );
+
+    @PUT
+    @Path("/{chatroomId}/name")
+    Response updateChatroomName(
+            @PathParam("chatroomId") @Positive int chatroomId,
+            @QueryParam("userId") @Positive long userId,
+            @QueryParam("newName") String newName);
+
+
 }
 
+
+
+//    @GET
+//    @Path("/chatrooms/events/{chatroom-id}")
+//    ChatroomEventfulElement getChatroomEventfulElementById(
+//            @PathParam("chatroom-id") int chatroomId,
+//            @QueryParam("userId") long userId
+//    );

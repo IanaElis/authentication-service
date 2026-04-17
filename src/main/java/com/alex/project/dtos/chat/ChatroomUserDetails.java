@@ -5,5 +5,6 @@ public record ChatroomUserDetails(long id,
                                   long userId,
                                   String role,
                                   String status,
-                                  String timeAdded) {
+                                  String timeAdded,
+                                  Long lastRead) {
 }

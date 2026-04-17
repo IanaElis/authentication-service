@@ -4,7 +4,9 @@ import com.alex.project.entiies.Role;
 import com.alex.project.entiies.User;
 import io.smallrye.jwt.build.Jwt;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.NotAuthorizedException;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.time.Duration;
 
@@ -24,5 +26,13 @@ public class JwtService {
                 .groups(role.toString())
                 .expiresIn(Duration.ofDays(7))
                 .sign(privateKeyLocation);
+    }
+
+    public static long currentUserId(JsonWebToken token) {
+        Object claim = token.getClaim("userid");
+        if (claim == null) {
+            throw new NotAuthorizedException("Missing userid claim");
+        }
+        return Long.parseLong(claim.toString());
     }
 }

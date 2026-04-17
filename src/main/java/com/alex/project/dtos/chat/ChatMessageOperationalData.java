@@ -7,10 +7,12 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 
 @RegisterForReflection
-public record ChatMessageSaveData(
-        @NotNull @NotBlank String clientMessageId,
+public record ChatMessageOperationalData (
+        String clientMessageId,
         int chatroomId,
-        long senderId,
-        @NotNull @NotBlank String content,
-        @NotNull Instant creationTimestamp) {
+        Long senderId,
+        Long senderUserId,
+        String content,
+        String creationTimestamp) {
 }
+

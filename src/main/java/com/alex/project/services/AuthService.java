@@ -56,12 +56,6 @@ public class AuthService {
 
         CreateProfileDto createProfileDto = new CreateProfileDto(user.getUsername(), user.getId());
 
-//        Response response = userServiceClient.createProfile(createProfileDto);
-
-//        if (response.getStatus() >= 300) {
-//            throw new RuntimeException("Profile creation failed");
-//        }
-
         return jwtService.jwtGenerator(user.getUsername(), Role.USER, user.getId());
     }
 }
