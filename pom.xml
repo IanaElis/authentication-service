@@ -118,7 +118,6 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-vertx</artifactId>
         </dependency>
-
     </dependencies>
 
     <build>

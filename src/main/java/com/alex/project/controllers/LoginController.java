@@ -36,7 +36,7 @@ public class LoginController {
         JsonWebToken jwt = parser.parse(token);
 
         String username = jwt.getSubject();
-        NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+        NewCookie jwtCookie = new NewCookie.Builder("Authorization")
                 .value(token)
                 .path("/")
                 .httpOnly(true)
@@ -44,7 +44,9 @@ public class LoginController {
                 .maxAge(3600)
                 .sameSite(NewCookie.SameSite.LAX)
                 .build();
-        return Response.ok().cookie(jwtCookie).build();
+
+
+        return Response.ok(username).cookie(jwtCookie).build();
     }
 
 //    @GET

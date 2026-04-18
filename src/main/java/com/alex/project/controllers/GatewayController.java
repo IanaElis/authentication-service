@@ -38,7 +38,9 @@ public class GatewayController {
     @POST
     @Path("{path: .*}")
     @Authenticated
-    public Uni<Response> post(@Context RoutingContext context, @PathParam("service") String service, byte[] body) {
+    public Uni<Response> post(@Context RoutingContext context, @PathParam("service") String service, byte[] body,
+                              @CookieParam("JwtToken") String token) {
+        System.out.println("POSTTTTTTTTT " + token);
         return proxy(context, service, body);
     }
 
@@ -68,7 +70,10 @@ public class GatewayController {
         HttpMethod method = context.request().method();
         HttpRequest<Buffer> req = webClient.requestAbs(method, baseUrl + path);
 
-        req.putHeader("X-USER-ID", jwt.getSubject());
+        req.putHeader("X-USER-EMAIL", jwt.getSubject());
+        req.putHeader("Content-Type", MediaType.APPLICATION_JSON);
+
+
 
         Buffer bodyBuffer = body != null ? Buffer.buffer(body) : Buffer.buffer();
 
@@ -76,7 +81,14 @@ public class GatewayController {
                 .onItem().transform(resp -> {
                     context.response().setStatusCode(resp.statusCode());
                     resp.headers().forEach(h -> context.response().putHeader(h.getKey(), h.getValue()));
-                    context.response().end(resp.bodyAsString());
+
+                    String responseBody = resp.bodyAsString();
+
+                    if (responseBody != null) {
+                        context.response().end(responseBody);
+                    } else {
+                        context.response().end();
+                    }
                     return Response.ok().build();
                 });
     }
