@@ -11,31 +11,37 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
-@Path("/auth/login")
+@Path("/auth")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 @PermitAll
 public class LoginController {
+
+    private static final Logger log = LoggerFactory.getLogger(LoginController.class);
 
     @Inject
     AuthService authService;
 
     @Inject
     JsonWebToken token;
+
     @Inject
     JWTParser parser;
 
-
     @POST
-    @Path("/")
+    @Path("/login")
     @PermitAll
     public Response login(@Valid LoginDto loginDto) throws ParseException {
+
         String token = authService.login(loginDto);
         JsonWebToken jwt = parser.parse(token);
 
         String username = jwt.getSubject();
+
         NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
                 .value(token)
                 .path("/")
@@ -47,10 +53,27 @@ public class LoginController {
         return Response.ok().cookie(jwtCookie).build();
     }
 
-//    @GET
-//    @Path("/google")
-//    @Authenticated
-//    public Response login() {
-//        throw new NotAuthorizedException("oidc");
-//    }
+
+    @POST
+    @Path("/logout")
+    public Response logout() throws ParseException {
+
+        NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+                .value("")
+                .path("/")
+                .httpOnly(true)
+                .secure(false)
+                .maxAge(0)
+                .sameSite(NewCookie.SameSite.LAX)
+                .build();
+        return Response.ok().cookie(jwtCookie).build();
+    }
+
+    @GET
+    @Path("/me")
+    @Authenticated
+    public Response checkLogin() {
+        return Response.ok().build();
+    }
+
 }

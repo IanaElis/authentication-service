@@ -30,7 +30,7 @@ import static com.alex.project.utils.ResponseChecker.ensureOk;
 @Consumes(MediaType.APPLICATION_JSON)
 @Authenticated
 @ApplicationScoped
-public class ChatControllerImpl implements ChatController {
+public class ChatControllerImpl{
 
     private static final Logger LOG = LoggerFactory.getLogger(ChatControllerImpl.class);
 
@@ -45,13 +45,10 @@ public class ChatControllerImpl implements ChatController {
 
     @Inject
     JsonWebToken token;
-//
-//    @Inject
-//    ObjectMapper mapper;
 
     @GET
     @Path("/load-chatrooms")
-    @Override
+    
     public ContentPage<ChatroomEventfulElement> loadChatroomEventfulElements(
             @QueryParam("latestChatroomId") Integer latestChatroomId,
             @QueryParam("latestChatMessageId") Long latestChatMessageId,
@@ -67,7 +64,7 @@ public class ChatControllerImpl implements ChatController {
 
     @POST
     @Path("/subscribe-chatrooms")
-    @Override
+    
     public Response subscribeUserToChatrooms() {
         long userId = currentUserId(token);
 
@@ -85,7 +82,7 @@ public class ChatControllerImpl implements ChatController {
 
     @POST
     @Path("/subscribe-chatrooms/{chatroom-id}")
-    @Override
+    
     public Response subscribeUserToChatroom(@PathParam("chatroom-id") @Positive int chatroomId) {
         long userId = currentUserId(token);
 
@@ -104,7 +101,7 @@ public class ChatControllerImpl implements ChatController {
 
     @POST
     @Path("/messages/send-message")
-    @Override
+    
     public Response sendMessage(@Valid ChatMessageOperationalData chatMessageOperationalData) {
 
         if(token.getClaim("userId") != null) {
@@ -134,7 +131,7 @@ public class ChatControllerImpl implements ChatController {
 
     @PUT
     @Path("/messages/update")
-    @Override
+    
     public Response updateMessage(@Valid ChatServiceRestClient.MessageUpdateRequest request) {
         long userId = currentUserId(token);
 
@@ -169,7 +166,7 @@ public class ChatControllerImpl implements ChatController {
 
     @PUT
     @Path("/messages/archive")
-    @Override
+    
     public Response archiveMessage(@Valid ChatServiceRestClient.MessageRemoveRequest request) {
         long userId = currentUserId(token);
 
@@ -203,7 +200,7 @@ public class ChatControllerImpl implements ChatController {
 
     @POST
     @Path("/chatrooms")
-    @Override
+    
     public Integer createChatroom(@Valid ChatServiceRestClient.CreateChatroomRequest request) {
         ChatServiceRestClient.CreateChatroomRequest enriched =
                 new ChatServiceRestClient.CreateChatroomRequest(
@@ -216,7 +213,7 @@ public class ChatControllerImpl implements ChatController {
 
     @PUT
     @Path("/chatrooms/{chatroomId}/archive")
-    @Override
+    
     public Response archiveChatroom(@PathParam("chatroomId") @Positive int chatroomId) {
         ensureOk(
                 chatServiceRestClient.archiveChatroom(currentUserId(token), chatroomId),
@@ -230,7 +227,7 @@ public class ChatControllerImpl implements ChatController {
 
     @GET
     @Path("/chatrooms/{chatroomId}")
-    @Override
+    
     public ChatroomOverview getChatroomOverview(@PathParam("chatroomId") @Positive int chatroomId) {
         return chatServiceRestClient.getChatroomOverview(
                 currentUserId(token),
@@ -240,7 +237,7 @@ public class ChatControllerImpl implements ChatController {
 
     @GET
     @Path("/chatrooms/{chatroomId}/users")
-    @Override
+    
     public ContentPage<ChatroomUserDetails> getUsers(
             @PathParam("chatroomId") @Positive int chatroomId,
             @QueryParam("oldestAdditionTimestamp") String oldestAdditionTimestamp,
@@ -256,7 +253,7 @@ public class ChatControllerImpl implements ChatController {
 
     @POST
     @Path("/chatrooms/{chatroomId}/users")
-    @Override
+    
     public Response addUsers(
             @PathParam("chatroomId") @Positive int chatroomId,
             @Valid ChatServiceRestClient.AddUsersRequest request) {
@@ -290,7 +287,7 @@ public class ChatControllerImpl implements ChatController {
 
     @PUT
     @Path("/chatrooms/{chatroomId}/users/{affectedUserId}/role")
-    @Override
+    
     public Response changeUserRole(
             @PathParam("chatroomId") @Positive int chatroomId,
             @PathParam("affectedUserId")@Positive long affectedUserId,
@@ -313,7 +310,7 @@ public class ChatControllerImpl implements ChatController {
 
     @PUT
     @Path("/chatrooms/{chatroomId}/users/update-last-read")
-    @Override
+    
     public Response updateLastReadState(@PathParam("chatroomId") @Positive int chatroomId,
                                         @QueryParam("messageId") @Positive long messageId) {
         return chatServiceRestClient.updateLastRead(
@@ -324,7 +321,7 @@ public class ChatControllerImpl implements ChatController {
 
     @PUT
     @Path("/chatroom-users/{chatroomId}/users/membership-status")
-    @Override
+    
     public Response changeUserMembershipStatus(
             @PathParam("chatroomId")@Positive int chatroomId,
             @QueryParam("affectedUserId")@Positive long affectedUserId,
@@ -345,7 +342,7 @@ public class ChatControllerImpl implements ChatController {
 
     @PUT
     @Path("/chatrooms/{chatroomId}/name")
-    @Override
+    
     public Response updateChatroomName(
             @PathParam("chatroomId") @Positive int chatroomId,
             @QueryParam("newName") @NotBlank String newName) {
@@ -367,7 +364,7 @@ public class ChatControllerImpl implements ChatController {
 
     @GET
     @Path("/messages/page")
-    @Override
+    
     public ContentPage<ChatMessageElement> getMessagePage(
             @QueryParam("chatroomId") int chatroomId,
             @QueryParam("oldestTimestamp") String oldestTimestamp,
