@@ -11,8 +11,6 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 
 @Path("/auth")
@@ -21,16 +19,14 @@ import org.slf4j.LoggerFactory;
 @PermitAll
 public class LoginController {
 
-    private static final Logger log = LoggerFactory.getLogger(LoginController.class);
-
     @Inject
     AuthService authService;
 
     @Inject
     JsonWebToken token;
-
     @Inject
     JWTParser parser;
+
 
     @POST
     @Path("/login")
@@ -56,6 +52,7 @@ public class LoginController {
 
     @POST
     @Path("/logout")
+    @PermitAll
     public Response logout() throws ParseException {
 
         NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
