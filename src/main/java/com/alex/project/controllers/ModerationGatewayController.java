@@ -1,6 +1,6 @@
 package com.alex.project.controllers;
 
-import com.alex.project.client.ModerationServiceClient;
+import com.alex.project.clients.ModerationServiceClient;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;

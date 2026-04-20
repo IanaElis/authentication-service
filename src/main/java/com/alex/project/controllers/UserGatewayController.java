@@ -1,11 +1,10 @@
 package com.alex.project.controllers;
 
-import com.alex.project.client.UserServiceClient;
+import com.alex.project.clients.UserServiceClient;
 import com.alex.project.dtos.user.FieldDto;
 import com.alex.project.dtos.user.ProfileDto;
 import com.alex.project.dtos.user.SearchUser;
 import com.alex.project.dtos.user.SpecialtyDto;
-import com.alex.project.entiies.Role;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;

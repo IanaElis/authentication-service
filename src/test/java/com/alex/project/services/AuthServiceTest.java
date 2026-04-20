@@ -1,7 +1,7 @@
 package com.alex.project.services;
 
 
-import com.alex.project.client.UserServiceClient;
+import com.alex.project.clients.UserServiceClient;
 import com.alex.project.dtos.LoginDto;
 import com.alex.project.dtos.RegistrationDto;
 import com.alex.project.dtos.user.CreateProfileDto;

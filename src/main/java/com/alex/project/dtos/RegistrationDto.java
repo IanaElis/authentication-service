@@ -1,11 +1,9 @@
 package com.alex.project.dtos;
 
-import com.alex.project.entiies.Role;
 
 public class RegistrationDto {
     private String username;
     private String password;
-    private Role role;
 
     public RegistrationDto(String username, String password) {
         this.username = username;
@@ -28,11 +26,4 @@ public class RegistrationDto {
         this.password = password;
     }
 
-    public Role getRole() {
-        return role;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-    }
 }

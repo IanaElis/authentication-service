@@ -13,7 +13,7 @@ import java.time.Duration;
 @ApplicationScoped
 public class JwtService {
 
-    @ConfigProperty(name = "mp.jwt.private-key.location")
+    @ConfigProperty(name = "smallrye.jwt.sign.key.location")
     String privateKeyLocation;
 
     @ConfigProperty(name ="mp.jwt.verify.issuer")

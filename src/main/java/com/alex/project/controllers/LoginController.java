@@ -16,17 +16,13 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 @Path("/auth")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@PermitAll
 public class LoginController {
 
     @Inject
     AuthService authService;
 
     @Inject
-    JsonWebToken token;
-    @Inject
     JWTParser parser;
-
 
     @POST
     @Path("/login")
@@ -46,11 +42,12 @@ public class LoginController {
                 .maxAge(3600)
                 .sameSite(NewCookie.SameSite.LAX)
                 .build();
+
         return Response.ok().cookie(jwtCookie).build();
     }
 
 
-    @POST
+    @GET
     @Path("/logout")
     @PermitAll
     public Response logout() throws ParseException {

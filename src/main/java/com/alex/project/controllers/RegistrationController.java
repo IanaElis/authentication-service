@@ -15,21 +15,26 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Path("/auth/signup")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@PermitAll
+@Authenticated
 public class RegistrationController {
 
+    private static final Logger log = LoggerFactory.getLogger(RegistrationController.class);
     @Inject
     AuthService authService;
 
     @POST
-    @Path("/")
+    @Path("/user")
     @PermitAll
     public Response register(@Valid RegistrationDto registrationDto) {
+
         String token = authService.registration(registrationDto);
+
         NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
                 .value(token)
                 .path("/")
@@ -38,16 +43,51 @@ public class RegistrationController {
                 .maxAge(3600)
                 .sameSite(NewCookie.SameSite.LAX)
                 .build();
+
+        return Response.ok().cookie(jwtCookie).build();
+    }
+
+    @POST
+    @Path("/moderator")
+    @RolesAllowed("ADMIN")
+    public Response registerModerator(@Valid RegistrationDto registrationDto){
+
+        String token = authService.registrationModerator(registrationDto);
+
+        NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+                .value(token)
+                .path("/")
+                .httpOnly(true)
+                .secure(false)
+                .maxAge(3600)
+                .sameSite(NewCookie.SameSite.LAX)
+                .build();
+
         return Response.ok().cookie(jwtCookie).build();
     }
 
     @POST
     @Path("/admin")
-    @Authenticated
-    @RolesAllowed("ADMIN")
+    @RolesAllowed("INNER")
     public Response registerAdmin(@Valid RegistrationDto registrationDto){
-        authService.registrationAdmin(registrationDto);
+        try {
+            String token = authService.registrationAdmin(registrationDto);
 
-        return Response.ok().build();
+            NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+                    .value(token)
+                    .path("/")
+                    .httpOnly(true)
+                    .secure(false)
+                    .maxAge(3600)
+                    .sameSite(NewCookie.SameSite.LAX)
+                    .build();
+
+            return Response.ok().cookie(jwtCookie).build();
+        } catch (Exception e) {
+            log.error("Error while registering admin", e);
+            return Response.serverError().build();
+        }
     }
+
+
 }
