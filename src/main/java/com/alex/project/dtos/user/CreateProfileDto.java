@@ -1,4 +1,4 @@
-package com.alex.project.dtos;
+package com.alex.project.dtos.user;
 
 public class CreateProfileDto {
     public String email;

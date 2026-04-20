@@ -1,7 +1,7 @@
 package com.alex.project.services;
 
-import com.alex.project.controllers.UserServiceClient;
-import com.alex.project.dtos.CreateProfileDto;
+import com.alex.project.client.UserServiceClient;
+import com.alex.project.dtos.user.CreateProfileDto;
 import com.alex.project.dtos.LoginDto;
 import com.alex.project.dtos.RegistrationDto;
 import com.alex.project.entiies.Role;
@@ -22,12 +22,14 @@ public class AuthService {
 
     @Inject
     UserRepository userRepository;
+
     @Inject
     JwtService jwtService;
 
     @Inject
     @RestClient
     UserServiceClient userServiceClient;
+
 
     public String login(LoginDto loginDto) {
         User user =
@@ -37,21 +39,12 @@ public class AuthService {
             throw new SecurityException("Error");
         }
 
-        return jwtService.jwtGenerator(user.getUsername(), Role.USER);
+        return jwtService.jwtGenerator(user.getUsername(), user.getRole());
     }
 
     @Transactional
     public String registration(RegistrationDto registrationDto) {
-        if(userRepository.findByUsername(registrationDto.getUsername()).isPresent()) {
-            throw new UserAlreadyExist("Username already exist");
-        }
-        User user = new User();
-        user.setUsername(registrationDto.getUsername());
-        String hashedPassword = BcryptUtil.bcryptHash(registrationDto.getPassword());
-        user.setPassword(hashedPassword);
-        user.setRole(Role.USER);
-
-        userRepository.persistAndFlush(user);
+        User user = userCreation(registrationDto, Role.USER);
 
         CreateProfileDto createProfileDto = new CreateProfileDto(user.getUsername(), user.getId());
 
@@ -62,5 +55,34 @@ public class AuthService {
         }
 
         return jwtService.jwtGenerator(user.getUsername(), Role.USER);
+    }
+
+    @Transactional
+    public void registrationAdmin(RegistrationDto registrationDto){
+        User user = userCreation(registrationDto, registrationDto.getRole());;
+
+        CreateProfileDto createProfileDto = new CreateProfileDto(user.getUsername(), user.getId());
+
+        Response response = userServiceClient.createProfile(createProfileDto);
+
+        if (response.getStatus() >= 300) {
+            throw new RuntimeException("Profile creation failed");
+        }
+    }
+
+    private User userCreation(RegistrationDto registrationDto, Role role) {
+        if(userRepository.findByUsername(registrationDto.getUsername()).isPresent()) {
+            throw new UserAlreadyExist("Username already exist");
+        }
+        User user = new User();
+        user.setUsername(registrationDto.getUsername());
+        String hashedPassword = BcryptUtil.bcryptHash(registrationDto.getPassword());
+        user.setPassword(hashedPassword);
+
+        user.setRole(role);
+
+        userRepository.persistAndFlush(user);
+
+        return user;
     }
 }

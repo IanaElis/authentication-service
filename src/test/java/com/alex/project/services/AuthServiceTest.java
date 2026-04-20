@@ -1,7 +1,7 @@
 package com.alex.project.services;
 
-import com.alex.project.controllers.UserServiceClient;
-import com.alex.project.dtos.CreateProfileDto;
+import com.alex.project.client.UserServiceClient;
+import com.alex.project.dtos.user.CreateProfileDto;
 import com.alex.project.dtos.LoginDto;
 import com.alex.project.dtos.RegistrationDto;
 import com.alex.project.entiies.Role;
@@ -11,7 +11,6 @@ import com.alex.project.exceptions.UserNotFoundException;
 import com.alex.project.repositories.UserRepository;
 import com.alex.project.utils.JwtService;
 import io.quarkus.elytron.security.common.BcryptUtil;
-import jakarta.transaction.Status;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

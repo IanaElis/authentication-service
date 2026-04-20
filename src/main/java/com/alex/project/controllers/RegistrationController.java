@@ -1,8 +1,11 @@
 package com.alex.project.controllers;
 
 import com.alex.project.dtos.RegistrationDto;
+import com.alex.project.entiies.Role;
 import com.alex.project.services.AuthService;
+import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -36,5 +39,15 @@ public class RegistrationController {
                 .sameSite(NewCookie.SameSite.LAX)
                 .build();
         return Response.ok().cookie(jwtCookie).build();
+    }
+
+    @POST
+    @Path("/admin")
+    @Authenticated
+    @RolesAllowed("ADMIN")
+    public Response registerAdmin(@Valid RegistrationDto registrationDto){
+        authService.registrationAdmin(registrationDto);
+
+        return Response.ok().build();
     }
 }
