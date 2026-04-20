@@ -1,5 +1,6 @@
 package com.alex.project.dtos;
 
+
 public class RegistrationDto {
     private String username;
     private String password;
@@ -24,4 +25,5 @@ public class RegistrationDto {
     public void setPassword(String password) {
         this.password = password;
     }
+
 }

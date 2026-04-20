@@ -1,5 +1,7 @@
 package com.alex.project.services;
 
+import com.alex.project.clients.UserServiceClient;
+import com.alex.project.dtos.user.CreateProfileDto;
 import com.alex.project.dtos.LoginDto;
 import com.alex.project.dtos.RegistrationDto;
 import com.alex.project.entiies.Role;
@@ -7,20 +9,28 @@ import com.alex.project.entiies.User;
 import com.alex.project.exceptions.UserAlreadyExist;
 import com.alex.project.exceptions.UserNotFoundException;
 import com.alex.project.repositories.UserRepository;
-import com.alex.project.utils.JwtGenerator;
+import com.alex.project.utils.JwtService;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 @ApplicationScoped
 public class AuthService {
 
     @Inject
     UserRepository userRepository;
-    @Inject
-    JwtGenerator jwtService;
 
+    @Inject
+    JwtService jwtService;
+
+    @Inject
+    @RestClient
+    UserServiceClient userServiceClient;
+
+    @Transactional
     public String login(LoginDto loginDto) {
         User user =
                 userRepository.findByUsername(loginDto.getUsername())
@@ -29,11 +39,55 @@ public class AuthService {
             throw new SecurityException("Error");
         }
 
-        return jwtService.jwtGenerator(user.getUsername(), user.getPassword());
+        return jwtService.jwtGenerator(user.getUsername(), user.getRole(), user.getId());
     }
 
     @Transactional
     public String registration(RegistrationDto registrationDto) {
+        User user = userCreation(registrationDto, Role.USER);
+
+        CreateProfileDto createProfileDto = new CreateProfileDto(user.getUsername(), user.getId());
+
+//        Response response = userServiceClient.createProfile(createProfileDto);
+
+//        if (response.getStatus() >= 300) {
+//            throw new RuntimeException("Profile creation failed");
+//        }
+
+        return jwtService.jwtGenerator(user.getUsername(), Role.USER, user.getId());
+    }
+
+    @Transactional
+    public String registrationAdmin(RegistrationDto registrationDto){
+        User user = userCreation(registrationDto, Role.ADMIN);
+
+        CreateProfileDto createProfileDto = new CreateProfileDto(user.getUsername(), user.getId());
+
+//        Response response = userServiceClient.createProfile(createProfileDto);
+//
+//        if (response.getStatus() >= 300) {
+//            throw new RuntimeException("Profile creation failed");
+//        }
+
+        return jwtService.jwtGenerator(user.getUsername(), Role.ADMIN, user.getId());
+    }
+
+    @Transactional
+    public String registrationModerator(RegistrationDto registrationDto){
+        User user = userCreation(registrationDto, Role.MODERATOR);
+
+        CreateProfileDto createProfileDto = new CreateProfileDto(user.getUsername(), user.getId());
+
+//        Response response = userServiceClient.createProfile(createProfileDto);
+//
+//        if (response.getStatus() >= 300) {
+//            throw new RuntimeException("Profile creation failed");
+//        }
+
+        return jwtService.jwtGenerator(user.getUsername(), Role.MODERATOR, user.getId());
+    }
+
+    private User userCreation(RegistrationDto registrationDto, Role role) {
         if(userRepository.findByUsername(registrationDto.getUsername()).isPresent()) {
             throw new UserAlreadyExist("Username already exist");
         }
@@ -41,10 +95,11 @@ public class AuthService {
         user.setUsername(registrationDto.getUsername());
         String hashedPassword = BcryptUtil.bcryptHash(registrationDto.getPassword());
         user.setPassword(hashedPassword);
-        user.setRole(Role.USER);
+
+        user.setRole(role);
 
         userRepository.persistAndFlush(user);
 
-        return jwtService.jwtGenerator(user.getUsername(), hashedPassword);
+        return user;
     }
 }

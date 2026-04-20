@@ -1,42 +1,73 @@
 package com.alex.project.controllers;
 
 import com.alex.project.dtos.LoginDto;
-import com.alex.project.repositories.UserRepository;
 import com.alex.project.services.AuthService;
-import com.alex.project.utils.JwtGenerator;
 import io.quarkus.security.Authenticated;
+import io.smallrye.jwt.auth.principal.JWTParser;
+import io.smallrye.jwt.auth.principal.ParseException;
 import jakarta.annotation.security.PermitAll;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
+import jakarta.ws.rs.core.*;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 
 
-@Path("/auth/login")
+@Path("/auth")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@PermitAll
 public class LoginController {
 
     @Inject
     AuthService authService;
 
+    @Inject
+    JWTParser parser;
+
     @POST
-    @Path("/")
+    @Path("/login")
     @PermitAll
-    public Response login(@Valid LoginDto loginDto) {
+    public Response login(@Valid LoginDto loginDto) throws ParseException {
+
         String token = authService.login(loginDto);
-        return Response.ok(token).build();
+        JsonWebToken jwt = parser.parse(token);
+
+        String username = jwt.getSubject();
+
+        NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+                .value(token)
+                .path("/")
+                .httpOnly(true)
+                .secure(false)
+                .maxAge(3600)
+                .sameSite(NewCookie.SameSite.LAX)
+                .build();
+
+        return Response.ok().cookie(jwtCookie).build();
+    }
+
+
+    @GET
+    @Path("/logout")
+    @PermitAll
+    public Response logout() throws ParseException {
+
+        NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+                .value("")
+                .path("/")
+                .httpOnly(true)
+                .secure(false)
+                .maxAge(0)
+                .sameSite(NewCookie.SameSite.LAX)
+                .build();
+        return Response.ok().cookie(jwtCookie).build();
     }
 
     @GET
-    @Path("/google")
+    @Path("/me")
     @Authenticated
-    public Response login() {
-        throw new NotAuthorizedException("oidc");
+    public Response checkLogin() {
+        return Response.ok().build();
     }
+
 }
