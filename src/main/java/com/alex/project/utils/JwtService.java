@@ -13,8 +13,8 @@ import java.time.Duration;
 @ApplicationScoped
 public class JwtService {
 
-    @ConfigProperty(name = "smallrye.jwt.sign.key.location")
-    String privateKeyLocation;
+//    @ConfigProperty(name = "smallrye.jwt.sign.key.location")
+//    String privateKeyLocation;
 
     @ConfigProperty(name ="mp.jwt.verify.issuer")
     String verifyIssuer;
@@ -25,7 +25,7 @@ public class JwtService {
                 .claim("userid", userId)
                 .groups(role.toString())
                 .expiresIn(Duration.ofDays(7))
-                .sign(privateKeyLocation);
+                .sign();
     }
 
     public static long currentUserId(JsonWebToken token) {

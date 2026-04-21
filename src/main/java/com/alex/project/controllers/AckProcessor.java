@@ -24,7 +24,6 @@ import static com.alex.project.utils.ResponseChecker.ensureOk;
 @ApplicationScoped
 public class AckProcessor {
 
-
     private static final Logger LOG = LoggerFactory.getLogger(AckProcessor.class);
     @RestClient
     ChatWsRestClient chatWsRestClient;
