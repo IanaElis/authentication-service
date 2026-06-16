@@ -24,15 +24,18 @@ public class LoginController {
     @Inject
     JWTParser parser;
 
+    @Inject
+    JsonWebToken jwt;
+
     @POST
     @Path("/login")
     @PermitAll
     public Response login(@Valid LoginDto loginDto) throws ParseException {
 
         String token = authService.login(loginDto);
-        JsonWebToken jwt = parser.parse(token);
+        JsonWebToken jwtParsed = parser.parse(token);
 
-        String username = jwt.getSubject();
+        String username = jwtParsed.getSubject();
 
         NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
                 .value(token)
@@ -43,7 +46,9 @@ public class LoginController {
                 .sameSite(NewCookie.SameSite.LAX)
                 .build();
 
-        return Response.ok().cookie(jwtCookie).build();
+        parser.parse(token).getClaim("userid").toString();
+
+        return Response.ok(jwtParsed.getClaim("userid").toString()).cookie(jwtCookie).build();
     }
 
 
@@ -67,7 +72,7 @@ public class LoginController {
     @Path("/me")
     @Authenticated
     public Response checkLogin() {
-        return Response.ok().build();
+        return Response.ok(jwt.getClaim("userid").toString()).build();
     }
 
 }

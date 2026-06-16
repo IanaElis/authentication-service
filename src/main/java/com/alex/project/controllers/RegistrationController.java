@@ -4,6 +4,8 @@ import com.alex.project.dtos.RegistrationDto;
 import com.alex.project.entiies.Role;
 import com.alex.project.services.AuthService;
 import io.quarkus.security.Authenticated;
+import io.smallrye.jwt.auth.principal.JWTParser;
+import io.smallrye.jwt.auth.principal.ParseException;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -28,42 +30,59 @@ public class RegistrationController {
     @Inject
     AuthService authService;
 
+    @Inject
+    JWTParser parser;
+
     @POST
     @Path("/user")
     @PermitAll
-    public Response register(@Valid RegistrationDto registrationDto) {
+    public Response register(@Valid RegistrationDto registrationDto) throws ParseException {
+        try {
+            String token = authService.registration(registrationDto);
 
-        String token = authService.registration(registrationDto);
+            NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+                    .value(token)
+                    .path("/")
+                    .httpOnly(true)
+                    .secure(false)
+                    .maxAge(3600)
+                    .sameSite(NewCookie.SameSite.LAX)
+                    .build();
 
-        NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
-                .value(token)
-                .path("/")
-                .httpOnly(true)
-                .secure(false)
-                .maxAge(3600)
-                .sameSite(NewCookie.SameSite.LAX)
-                .build();
 
-        return Response.ok().cookie(jwtCookie).build();
+            return Response
+                    .ok(parser.parse(token).getClaim("userid").toString())
+                    .cookie(jwtCookie).build();
+
+        } catch (Exception e) {
+            log.error("Error while registering user", e);
+            return Response.serverError().build();
+        }
     }
 
     @POST
     @Path("/moderator")
     @RolesAllowed("ADMIN")
     public Response registerModerator(@Valid RegistrationDto registrationDto){
+        try {
+            String token = authService.registrationModerator(registrationDto);
 
-        String token = authService.registrationModerator(registrationDto);
+            NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+                    .value(token)
+                    .path("/")
+                    .httpOnly(true)
+                    .secure(false)
+                    .maxAge(3600)
+                    .sameSite(NewCookie.SameSite.LAX)
+                    .build();
 
-        NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
-                .value(token)
-                .path("/")
-                .httpOnly(true)
-                .secure(false)
-                .maxAge(3600)
-                .sameSite(NewCookie.SameSite.LAX)
-                .build();
-
-        return Response.ok().cookie(jwtCookie).build();
+            return Response
+                    .ok(parser.parse(token).getClaim("userid").toString())
+                    .cookie(jwtCookie).build();
+        } catch (Exception e) {
+            log.error("Error while registering moderator", e);
+            return Response.serverError().build();
+        }
     }
 
     @POST
@@ -82,7 +101,9 @@ public class RegistrationController {
                     .sameSite(NewCookie.SameSite.LAX)
                     .build();
 
-            return Response.ok().cookie(jwtCookie).build();
+            return Response
+                    .ok(parser.parse(token).getClaim("userid").toString())
+                    .cookie(jwtCookie).build();
         } catch (Exception e) {
             log.error("Error while registering admin", e);
             return Response.serverError().build();

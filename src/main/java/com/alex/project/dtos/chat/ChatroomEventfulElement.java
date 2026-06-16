@@ -1,13 +1,16 @@
 package com.alex.project.dtos.chat;
 
 public record ChatroomEventfulElement(
-        long userId,
+        Long userId,
         int chatroomId,
-        String chatroomName,
+        Long lastRead,
+        String lastReadTimestamp,
+        String displayName,
+        boolean isPrivateChat,
+        String URLImage,
         String messageContent,
-        long lastChatMessageId,
+        Long lastChatMessageId,
         String clientMessageId,
         String activityTime
 ) {
 }
-

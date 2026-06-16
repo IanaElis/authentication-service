@@ -44,14 +44,14 @@ public interface ChatServiceRestClient {
             String name
     ) {}
 
+
     @GET
     @Path("/chat-messages/page")
-    ContentPage<ChatMessageElement> getMessagePage(@QueryParam("requesterUserId") long requesterUserId, // data retrieval, req-req-resp not ok
-                                                   @QueryParam("chatroomId") int chatroomId,
-                                                   @QueryParam("oldestTimestamp") String oldestTimestamp,
-                                                   @QueryParam("oldestId") Integer oldestId,
-                                                   @QueryParam("requestForOlder") boolean requestForOlder);
-
+    ContentPage<ChatMessageElement> getMessagePage(@QueryParam("requesterUserId") @Positive long requesterUserId,
+                                                   @QueryParam("chatroomId") @Positive int chatroomId,
+                                                   @QueryParam("messageCursorId") Long messageCursorId,
+                                                   @QueryParam("downScroll") boolean downScroll,
+                                                   @QueryParam("initialRequest") boolean initialRequest);
 
     @POST
     @Path("/chatrooms/create")
@@ -81,7 +81,7 @@ public interface ChatServiceRestClient {
     );
 
     @GET
-    @Path("/user")
+    @Path("/chatrooms/user")
     List<Integer> getChatroomIdsForUser(@QueryParam("userId") long requestingUserId);
 
     public record AddUsersRequest(Map<Long, String> usersWithRoles) {}
@@ -90,7 +90,7 @@ public interface ChatServiceRestClient {
 
     public record UpdateMembershipStatusRequest(String updatedStatus) {}
 
-    public record UpdateLastReadStateRequest(long newLastReadState) {}
+    public record UpdateLastReadStateRequest(long newLastReadMessage, String newLastReadTimestamp) {}
 
     @GET
     @Path("/chatroom-users/{chatroomId}/users")
