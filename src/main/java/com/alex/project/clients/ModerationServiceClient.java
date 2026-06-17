@@ -1,5 +1,6 @@
 package com.alex.project.clients;
 
+import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
@@ -9,9 +10,9 @@ public interface ModerationServiceClient {
 
     @GET
     @Path("/internal/moderationProfiles/all")
-    Response getAllModerationRequests();
+    Uni<Response> getAllModerationRequests();
 
     @POST
     @Path("/moderationResponse/{moderationId}/accept")
-    Response accept(@PathParam("moderationId") Long moderationId, @HeaderParam("X-USER-EMAIL") String email);
+    Uni<Response> accept(@PathParam("moderationId") Long moderationId, @HeaderParam("X-USER-EMAIL") String email);
 }

@@ -3,6 +3,7 @@ package com.alex.project.controllers;
 import com.alex.project.clients.FriendServiceApiClient;
 import com.alex.project.dtos.people.FriendRequestDto;
 import com.alex.project.dtos.people.PersonDto;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -27,8 +28,7 @@ public class FriendController {
 
     @POST
     @Path("/create")
-    public boolean createUser(FriendServiceApiClient.CreateUserRequest request) {
-
+    public Uni<Boolean> createUser(FriendServiceApiClient.CreateUserRequest request) {
         if (request == null
                 || request.userId <= 0
                 || request.name == null
@@ -36,239 +36,198 @@ public class FriendController {
                 || request.facultyNumber <= 0) {
             throw new BadRequestException("Invalid user data.");
         }
-
-        try {
-            return client.createUser(request);
-        } catch (Exception e) {
-            LOG.error("Error while creating user", e);
-            throw new BadRequestException("Unable to create user.");
-        }
+        return client.createUser(request)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while creating user", e);
+                    throw new BadRequestException("Unable to create user.");
+                });
     }
 
     @PUT
     @Path("/{userId}/name")
-    public boolean updateName(@PathParam("userId") long userId,
-                              FriendServiceApiClient.UpdateNameRequest request) {
-
+    public Uni<Boolean> updateName(@PathParam("userId") long userId,
+                                    FriendServiceApiClient.UpdateNameRequest request) {
         if (userId <= 0
                 || request == null
                 || request.newName == null
                 || request.newName.isBlank()) {
             throw new BadRequestException("Invalid name update request.");
         }
-
-        try {
-            return client.updateName(userId, request);
-        } catch (Exception e) {
-            LOG.error("Error while updating name", e);
-            throw new BadRequestException("Unable to update name.");
-        }
+        return client.updateName(userId, request)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while updating name", e);
+                    throw new BadRequestException("Unable to update name.");
+                });
     }
 
     @GET
     @Path("{userId}/search/{page}")
-    public List<PersonDto> searchPeople(@PathParam("userId") long userId,
-                                        @PathParam("page") int page,
-                                        @QueryParam("query") String query) {
-
+    public Uni<List<PersonDto>> searchPeople(@PathParam("userId") long userId,
+                                              @PathParam("page") int page,
+                                              @QueryParam("query") String query) {
         if (userId <= 0 || page < 0 || query == null || query.isBlank()) {
             throw new BadRequestException("Invalid search parameters.");
         }
-
-        try {
-            return client.searchPeople(userId, page, query);
-        } catch (Exception e) {
-            LOG.error("Error while searching people", e);
-            return Collections.emptyList();
-        }
+        return client.searchPeople(userId, page, query)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while searching people", e);
+                    return Collections.emptyList();
+                });
     }
 
     @GET
     @Path("{userId}/friends/{page}")
-    public List<PersonDto> getFriendsOfPerson(@PathParam("userId") long userId,
-                                              @PathParam("page") int page) {
-
+    public Uni<List<PersonDto>> getFriendsOfPerson(@PathParam("userId") long userId,
+                                                    @PathParam("page") int page) {
         if (userId <= 0 || page < 0) {
             throw new BadRequestException("Invalid friends request.");
         }
-
-        try {
-            return client.getFriendsOfPerson(userId, page);
-        } catch (Exception e) {
-            LOG.error("Error while fetching friends", e);
-            return Collections.emptyList();
-        }
+        return client.getFriendsOfPerson(userId, page)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while fetching friends", e);
+                    return Collections.emptyList();
+                });
     }
 
     @GET
     @Path("{userId}/friends-all")
-    public List<PersonDto> getAllFriendsOfPerson(@PathParam("userId") long userId) {
-
+    public Uni<List<PersonDto>> getAllFriendsOfPerson(@PathParam("userId") long userId) {
         if (userId <= 0) {
             throw new BadRequestException("Invalid user id.");
         }
-
-        try {
-            return client.getAllFriendsOfPerson(userId);
-        } catch (Exception e) {
-            LOG.error("Error while fetching all friends", e);
-            return Collections.emptyList();
-        }
+        return client.getAllFriendsOfPerson(userId)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while fetching all friends", e);
+                    return Collections.emptyList();
+                });
     }
 
     @GET
     @Path("{userA}/{userB}/common-friends/{page}")
-    public List<PersonDto> getCommonABFriends(@PathParam("userA") long userA,
-                                              @PathParam("userB") long userB,
-                                              @PathParam("page") int page) {
-
+    public Uni<List<PersonDto>> getCommonABFriends(@PathParam("userA") long userA,
+                                                    @PathParam("userB") long userB,
+                                                    @PathParam("page") int page) {
         if (userA <= 0 || userB <= 0 || userA == userB || page < 0) {
             throw new BadRequestException("Invalid common friends request.");
         }
-
-        try {
-            return client.getCommonABFriends(userA, userB, page);
-        } catch (Exception e) {
-            LOG.error("Error while fetching common friends", e);
-            return Collections.emptyList();
-        }
+        return client.getCommonABFriends(userA, userB, page)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while fetching common friends", e);
+                    return Collections.emptyList();
+                });
     }
 
     @GET
     @Path("{userId}/incoming-requests/{page}")
-    public List<FriendRequestDto> getIncomingRequests(@PathParam("userId") long userId,
-                                                      @PathParam("page") int page) {
-
+    public Uni<List<FriendRequestDto>> getIncomingRequests(@PathParam("userId") long userId,
+                                                            @PathParam("page") int page) {
         if (userId <= 0 || page < 0) {
             throw new BadRequestException("Invalid incoming requests query.");
         }
-
-        try {
-            return client.getIncomingRequests(userId, page);
-        } catch (Exception e) {
-            LOG.error("Error while fetching incoming requests", e);
-            return Collections.emptyList();
-        }
+        return client.getIncomingRequests(userId, page)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while fetching incoming requests", e);
+                    return Collections.emptyList();
+                });
     }
 
     @GET
     @Path("{userId}/outgoing-requests/{page}")
-    public List<FriendRequestDto> getOutgoingRequests(@PathParam("userId") long userId,
-                                                      @PathParam("page") int page) {
-
+    public Uni<List<FriendRequestDto>> getOutgoingRequests(@PathParam("userId") long userId,
+                                                            @PathParam("page") int page) {
         if (userId <= 0 || page < 0) {
             throw new BadRequestException("Invalid outgoing requests query.");
         }
-
-        try {
-            return client.getOutgoingRequests(userId, page);
-        } catch (Exception e) {
-            LOG.error("Error while fetching outgoing requests", e);
-            return Collections.emptyList();
-        }
+        return client.getOutgoingRequests(userId, page)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while fetching outgoing requests", e);
+                    return Collections.emptyList();
+                });
     }
 
     @GET
     @Path("{userId}/blocked/{page}")
-    public List<PersonDto> getBlockedUsers(@PathParam("userId") long userId,
-                                           @PathParam("page") int page) {
-
+    public Uni<List<PersonDto>> getBlockedUsers(@PathParam("userId") long userId,
+                                                 @PathParam("page") int page) {
         if (userId <= 0 || page < 0) {
             throw new BadRequestException("Invalid blocked users query.");
         }
-
-        try {
-            return client.getBlockedUsers(userId, page);
-        } catch (Exception e) {
-            LOG.error("Error while fetching blocked users", e);
-            return Collections.emptyList();
-        }
+        return client.getBlockedUsers(userId, page)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while fetching blocked users", e);
+                    return Collections.emptyList();
+                });
     }
 
     @POST
     @Path("/send-request")
-    public boolean sendFriendRequest(FriendServiceApiClient.UserAction action) {
-
+    public Uni<Boolean> sendFriendRequest(FriendServiceApiClient.UserAction action) {
         if (action == null
                 || action.userA <= 0
                 || action.userB <= 0
                 || action.userA == action.userB) {
             throw new BadRequestException("Invalid friend request.");
         }
-
-        try {
-            return client.sendFriendRequest(action);
-        } catch (Exception e) {
-            LOG.error("Error while sending friend request", e);
-            throw new BadRequestException("Unable to send friend request.");
-        }
+        return client.sendFriendRequest(action)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while sending friend request", e);
+                    throw new BadRequestException("Unable to send friend request.");
+                });
     }
 
     @POST
     @Path("/remove-request")
-    public boolean removeFriendRequest(FriendServiceApiClient.UserAction action) {
-
+    public Uni<Boolean> removeFriendRequest(FriendServiceApiClient.UserAction action) {
         if (action == null || action.userA <= 0 || action.userB <= 0) {
             throw new BadRequestException("Invalid remove request.");
         }
-
-        try {
-            return client.removeFriendRequest(action);
-        } catch (Exception e) {
-            LOG.error("Error while removing friend request", e);
-            throw new BadRequestException("Unable to remove friend request.");
-        }
+        return client.removeFriendRequest(action)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while removing friend request", e);
+                    throw new BadRequestException("Unable to remove friend request.");
+                });
     }
 
     @POST
     @Path("/delete-friend")
-    public boolean deleteFriend(FriendServiceApiClient.UserAction action) {
-
+    public Uni<Boolean> deleteFriend(FriendServiceApiClient.UserAction action) {
         if (action == null || action.userA <= 0 || action.userB <= 0) {
             throw new BadRequestException("Invalid delete friend request.");
         }
-
-        try {
-            return client.deleteFriend(action);
-        } catch (Exception e) {
-            LOG.error("Error while deleting friend", e);
-            throw new BadRequestException("Unable to delete friend.");
-        }
+        return client.deleteFriend(action)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while deleting friend", e);
+                    throw new BadRequestException("Unable to delete friend.");
+                });
     }
 
     @POST
     @Path("/add-blacklist")
-    public boolean addUserToBlacklist(FriendServiceApiClient.BlockAction action) {
-
+    public Uni<Boolean> addUserToBlacklist(FriendServiceApiClient.BlockAction action) {
         if (action == null
                 || action.blocker <= 0
                 || action.blocked <= 0
                 || action.blocker == action.blocked) {
             throw new BadRequestException("Invalid blacklist request.");
         }
-
-        try {
-            return client.addUserToBlacklist(action);
-        } catch (Exception e) {
-            LOG.error("Error while blocking user", e);
-            throw new BadRequestException("Unable to block user.");
-        }
+        return client.addUserToBlacklist(action)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while blocking user", e);
+                    throw new BadRequestException("Unable to block user.");
+                });
     }
 
     @GET
     @Path("{userA}/{userB}/is-blocked")
-    public boolean checkIfBlocked(@PathParam("userA") long userA,
-                                  @PathParam("userB") long userB) {
-
+    public Uni<Boolean> checkIfBlocked(@PathParam("userA") long userA,
+                                        @PathParam("userB") long userB) {
         if (userA <= 0 || userB <= 0 || userA == userB) {
             throw new BadRequestException("Invalid block check request.");
         }
-
-        try {
-            return client.checkIfBlocked(userA, userB);
-        } catch (Exception e) {
-            LOG.error("Error while checking block status", e);
-            throw new BadRequestException("Unable to check block status.");
-        }
+        return client.checkIfBlocked(userA, userB)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while checking block status", e);
+                    throw new BadRequestException("Unable to check block status.");
+                });
     }
 }

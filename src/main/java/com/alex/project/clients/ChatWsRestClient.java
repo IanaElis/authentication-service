@@ -32,18 +32,18 @@ public interface ChatWsRestClient {
 
     @POST
     @Path("/subscribe-rooms")
-    Response subscribeToRooms(UserIdToRoomsByResponse request);
+    Uni<Response> subscribeToRooms(UserIdToRoomsByResponse request);
 
     @POST
     @Path("/message-state-update")
-    Response broadcastMessageUpdate(ChangeMessageStateEvent event);
+    Uni<Response> broadcastMessageUpdate(ChangeMessageStateEvent event);
 
     @POST
     @Path("/new-chatroom-broadcast")
-    Response broadcastChatroomUserAddition(ChatroomUserAddEvent event);
+    Uni<Response> broadcastChatroomUserAddition(ChatroomUserAddEvent event);
 
     @POST
     @Path("/ack-result")
-    Response ackResult(Map<AckStatus, List<ChatMessageOperationalData>> res);
+    Uni<Response> ackResult(Map<AckStatus, List<ChatMessageOperationalData>> res);
 
 }

@@ -5,6 +5,7 @@ import com.alex.project.clients.ChatWsRestClient;
 import com.alex.project.dtos.ContentPage;
 import com.alex.project.dtos.chat.*;
 import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -48,14 +49,14 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
     @GET
     @Path("/load-chatrooms")
     @Override
-    public ContentPage<ChatroomEventfulElement> loadChatroomEventfulElements(
+    public Uni<ContentPage<ChatroomEventfulElement>> loadChatroomEventfulElements(
             @QueryParam("latestChatroomId") Integer latestChatroomId,
             @QueryParam("latestChatMessageId") Long latestChatMessageId,
             @QueryParam("latestEventTime") String latestEventTime
     ) {
         return chatServiceRestClient.loadChatroomEventfulElements(
                 currentUserId(token),
-                    latestEventTime,
+                latestEventTime,
                 latestChatroomId,
                 latestChatMessageId
         );
@@ -64,74 +65,69 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
     @POST
     @Path("/subscribe-chatrooms")
     @Override
-    public Response subscribeUserToChatrooms() {
+    public Uni<Response> subscribeUserToChatrooms() {
         long userId = currentUserId(token);
 
-        List<Integer> rooms = chatServiceRestClient.getChatroomIdsForUser(userId);
-
-        Response response = chatWsRestClient.subscribeToRooms(
-                new ChatWsRestClient.UserIdToRoomsByResponse(userId, rooms)
-        );
-
-        ensureOk(response,
-                "Unable to subscribe user to chatrooms",
-                LOG);
-        return Response.ok(response).build();
+        Uni<List<Integer>> roomsUni = chatServiceRestClient.getChatroomIdsForUser(userId);
+        Uni<Response> subscribeUni = roomsUni.flatMap(rooms ->
+                chatWsRestClient.subscribeToRooms(
+                        new ChatWsRestClient.UserIdToRoomsByResponse(userId, rooms)));
+        return subscribeUni
+                .invoke(response -> ensureOk(response,
+                        "Unable to subscribe user to chatrooms", LOG))
+                .map(r -> Response.ok(r).build());
     }
 
     @POST
     @Path("/subscribe-chatrooms/{chatroom-id}")
     @Override
-    public Response subscribeUserToChatroom(@PathParam("chatroom-id") @Positive int chatroomId) {
+    public Uni<Response> subscribeUserToChatroom(@PathParam("chatroom-id") @Positive int chatroomId) {
         long userId = currentUserId(token);
 
-        Response response = chatWsRestClient.subscribeToRooms(
+        Uni<Response> subscribeUni = chatWsRestClient.subscribeToRooms(
                 new ChatWsRestClient.UserIdToRoomsByResponse(
                         userId,
-                        List.of(chatroomId)
-                )
-        );
-
-        ensureOk(response,
-                "Unable to subscribe user to chatroom " + chatroomId,
-                LOG);
-        return Response.ok().build();
+                        List.of(chatroomId)));
+        return subscribeUni
+                .invoke(response -> ensureOk(response,
+                        "Unable to subscribe user to chatroom " + chatroomId, LOG))
+                .map(r -> Response.ok().build());
     }
 
     @POST
     @Path("/messages/send-message")
     @Override
-    public Response sendMessage(@Valid ChatMessageOperationalData chatMessageOperationalData) {
+    public Uni<Response> sendMessage(@Valid ChatMessageOperationalData chatMessageOperationalData) {
+        return Uni.createFrom().item(() -> {
+            if (token.getClaim("userId") != null) {
+                LOG.warn("Attempt to send message from user directly " +
+                        "to service was made, token: {}",
+                        token.getClaimNames().toString());
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
 
-        if(token.getClaim("userId") != null) {
-            LOG.warn("Attempt to send message from user directly " +
-                    "to service was made, token: {}",
-                    token.getClaimNames().toString() );
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
+            if (!token.getClaim("service").toString().equals("ws-service")) {
+                LOG.warn("Attempt to send message was made without " +
+                        "sufficient claim, token: {}",
+                        token.getClaimNames().toString());
+                return Response.status(Response.Status.BAD_REQUEST).build();
+            }
 
-        if(!token.getClaim("service").toString().equals("ws-service")) {
-            LOG.warn("Attempt to send message was made without " +
-                    "sufficient claim, token: {}",
-                    token.getClaimNames().toString() );
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Sending message {} with clientId {}",
+                        chatMessageOperationalData,
+                        chatMessageOperationalData.clientMessageId());
+            }
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Sending message {} with clientId {}",
-                    chatMessageOperationalData,
-                    chatMessageOperationalData.clientMessageId());
-        }
-
-        emitter.send(chatMessageOperationalData);
-
-        return Response.ok().build();
+            emitter.send(chatMessageOperationalData);
+            return Response.ok().build();
+        });
     }
 
     @PUT
     @Path("/messages/update")
     @Override
-    public Response updateMessage(@Valid ChatServiceRestClient.MessageUpdateRequest request) {
+    public Uni<Response> updateMessage(@Valid ChatServiceRestClient.MessageUpdateRequest request) {
         long userId = currentUserId(token);
 
         ChatServiceRestClient.MessageUpdateRequest enriched =
@@ -142,31 +138,27 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
                         request.newMessage()
                 );
 
-        ensureOk(
-                chatServiceRestClient.updateMessage(enriched),
-                "Unable to process chat message update",
-                LOG
-        );
+        Uni<Response> updateUni = chatServiceRestClient.updateMessage(enriched)
+                .invoke(response -> ensureOk(response,
+                        "Unable to process chat message update", LOG));
 
-        ensureOk(
+        Uni<Response> broadcastUni = updateUni.flatMap(r ->
                 chatWsRestClient.broadcastMessageUpdate(
                         new ChatWsRestClient.ChangeMessageStateEvent(
                                 request.message().uuid(),
                                 request.chatroomId(),
-                                request.newMessage()
-                        )
-                ),
-                "Unable to broadcast message update",
-                LOG
-        );
-        return Response.ok().build();
+                                request.newMessage())));
 
+        return broadcastUni
+                .invoke(response -> ensureOk(response,
+                        "Unable to broadcast message update", LOG))
+                .map(r -> Response.ok().build());
     }
 
     @PUT
     @Path("/messages/archive")
     @Override
-    public Response archiveMessage(@Valid ChatServiceRestClient.MessageRemoveRequest request) {
+    public Uni<Response> archiveMessage(@Valid ChatServiceRestClient.MessageRemoveRequest request) {
         long userId = currentUserId(token);
 
         ChatServiceRestClient.MessageRemoveRequest enriched =
@@ -176,31 +168,27 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
                         request.message()
                 );
 
-        ensureOk(
-                chatServiceRestClient.archiveMessage(enriched),
-                "Unable to archive chat message",
-                LOG
-        );
+        Uni<Response> archiveUni = chatServiceRestClient.archiveMessage(enriched)
+                .invoke(response -> ensureOk(response,
+                        "Unable to archive chat message", LOG));
 
-        ensureOk(
+        Uni<Response> broadcastUni = archiveUni.flatMap(r ->
                 chatWsRestClient.broadcastMessageUpdate(
                         new ChatWsRestClient.ChangeMessageStateEvent(
                                 request.message().uuid(),
                                 request.chatroomId(),
-                                null
-                        )
-                ),
-                "Unable to broadcast message archive",
-                LOG
-        );
-        return Response.ok().build();
+                                null)));
 
+        return broadcastUni
+                .invoke(response -> ensureOk(response,
+                        "Unable to broadcast message archive", LOG))
+                .map(r -> Response.ok().build());
     }
 
     @POST
     @Path("/chatrooms")
     @Override
-    public Integer createChatroom(@Valid ChatServiceRestClient.CreateChatroomRequest request) {
+    public Uni<Integer> createChatroom(@Valid ChatServiceRestClient.CreateChatroomRequest request) {
         ChatServiceRestClient.CreateChatroomRequest enriched =
                 new ChatServiceRestClient.CreateChatroomRequest(
                         currentUserId(token),
@@ -213,21 +201,17 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
     @PUT
     @Path("/chatrooms/{chatroomId}/archive")
     @Override
-    public Response archiveChatroom(@PathParam("chatroomId") @Positive int chatroomId) {
-        ensureOk(
-                chatServiceRestClient.archiveChatroom(currentUserId(token), chatroomId),
-                "Unable to archive chatroom " + chatroomId,
-                LOG
-        );
-
-        return Response.ok().build();
-
+    public Uni<Response> archiveChatroom(@PathParam("chatroomId") @Positive int chatroomId) {
+        return chatServiceRestClient.archiveChatroom(currentUserId(token), chatroomId)
+                .invoke(response -> ensureOk(response,
+                        "Unable to archive chatroom " + chatroomId, LOG))
+                .map(r -> Response.ok().build());
     }
 
     @GET
     @Path("/chatrooms/{chatroomId}")
     @Override
-    public ChatroomOverview getChatroomOverview(@PathParam("chatroomId") @Positive int chatroomId) {
+    public Uni<ChatroomOverview> getChatroomOverview(@PathParam("chatroomId") @Positive int chatroomId) {
         return chatServiceRestClient.getChatroomOverview(
                 currentUserId(token),
                 chatroomId
@@ -237,7 +221,7 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
     @GET
     @Path("/chatrooms/{chatroomId}/users")
     @Override
-    public ContentPage<ChatroomUserDetails> getUsers(
+    public Uni<ContentPage<ChatroomUserDetails>> getUsers(
             @PathParam("chatroomId") @Positive int chatroomId,
             @QueryParam("oldestAdditionTimestamp") String oldestAdditionTimestamp,
             @QueryParam("oldestAdditionId") Integer oldestAdditionId
@@ -253,66 +237,56 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
     @POST
     @Path("/chatrooms/{chatroomId}/users")
     @Override
-    public Response addUsers(
+    public Uni<Response> addUsers(
             @PathParam("chatroomId") @Positive int chatroomId,
             @Valid ChatServiceRestClient.AddUsersRequest request) {
 
-        ensureOk(
-                chatServiceRestClient.addUsers(
+        Uni<Response> addUsersUni = chatServiceRestClient.addUsers(
                         currentUserId(token),
                         chatroomId,
-                        request
-                ),
-                "Unable to add users to chatroom " + chatroomId,
-                LOG
-        );
+                        request)
+                .invoke(response -> ensureOk(response,
+                        "Unable to add users to chatroom " + chatroomId, LOG));
 
-        ensureOk(
+        Uni<Response> broadcastUni = addUsersUni.flatMap(r ->
                 chatWsRestClient.broadcastChatroomUserAddition(
                         new ChatWsRestClient.ChatroomUserAddEvent(
                                 chatroomId,
                                 request.usersWithRoles()
                                         .keySet()
                                         .stream()
-                                        .toList()
-                        )
-                ),
-                "Unable to broadcast user addition for chatroom " + chatroomId,
-                LOG
-        );
+                                        .toList())));
 
-        return Response.ok().build();
+        return broadcastUni
+                .invoke(response -> ensureOk(response,
+                        "Unable to broadcast user addition for chatroom " + chatroomId, LOG))
+                .map(r -> Response.ok().build());
     }
 
     @PUT
     @Path("/chatrooms/{chatroomId}/users/{affectedUserId}/role")
     @Override
-    public Response changeUserRole(
+    public Uni<Response> changeUserRole(
             @PathParam("chatroomId") @Positive int chatroomId,
             @PathParam("affectedUserId") @Positive long affectedUserId,
             @Valid ChatServiceRestClient.UpdateRoleRequest request
     ) {
-        ensureOk(
-                chatServiceRestClient.changeUserRole(
+        return chatServiceRestClient.changeUserRole(
                         currentUserId(token),
                         chatroomId,
                         affectedUserId,
-                        request
-                ),
-                "Unable to change user role",
-                LOG
-        );
-
-        return Response.ok().build();
+                        request)
+                .invoke(response -> ensureOk(response,
+                        "Unable to change user role", LOG))
+                .map(r -> Response.ok().build());
     }
-
 
     @PUT
     @Path("/chatroom-users/{chatroomId}/users/update-last-read")
     @Override
-    public Response updateLastReadState(@PathParam("chatroomId") @Positive int chatroomId,
-                                        @QueryParam("messageId") long messageId,
-                                        @QueryParam("timeSent") @Positive long timestamp) {
+    public Uni<Response> updateLastReadState(@PathParam("chatroomId") @Positive int chatroomId,
+                                              @QueryParam("messageId") long messageId,
+                                              @QueryParam("timeSent") @Positive long timestamp) {
         return chatServiceRestClient.updateLastRead(
                 chatroomId,
                 currentUserId(token),
@@ -322,50 +296,41 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
     @PUT
     @Path("/chatroom-users/{chatroomId}/users/membership-status")
     @Override
-    public Response changeUserMembershipStatus(
+    public Uni<Response> changeUserMembershipStatus(
             @PathParam("chatroomId") @Positive int chatroomId,
             @QueryParam("affectedUserId") @Positive long affectedUserId,
             @Valid ChatServiceRestClient.UpdateMembershipStatusRequest request
     ) {
-        ensureOk(
-                chatServiceRestClient.changeUserMembershipStatus(
+        return chatServiceRestClient.changeUserMembershipStatus(
                         currentUserId(token),
                         affectedUserId,
                         chatroomId,
-                        request
-                ),
-                "Unable to change membership status",
-                LOG
-        );
-        return Response.ok().build();
+                        request)
+                .invoke(response -> ensureOk(response,
+                        "Unable to change membership status", LOG))
+                .map(r -> Response.ok().build());
     }
 
     @PUT
     @Path("/chatrooms/{chatroomId}/name")
     @Override
-    public Response updateChatroomName(
+    public Uni<Response> updateChatroomName(
             @PathParam("chatroomId") @Positive int chatroomId,
             @QueryParam("newName") @NotBlank String newName) {
 
-        ensureOk(
-                chatServiceRestClient.updateChatroomName(
+        return chatServiceRestClient.updateChatroomName(
                         chatroomId,
                         currentUserId(token),
-                        newName
-                ),
-                "Unable to update chatroom name",
-                LOG
-        );
-
-        return Response.ok().build();
+                        newName)
+                .invoke(response -> ensureOk(response,
+                        "Unable to update chatroom name", LOG))
+                .map(r -> Response.ok().build());
     }
-
-
 
     @GET
     @Path("/messages/page")
     @Override
-    public ContentPage<ChatMessageElement> getMessagePage(
+    public Uni<ContentPage<ChatMessageElement>> getMessagePage(
             @QueryParam("chatroomId") @Positive int chatroomId,
             @QueryParam("messageCursorId") Long messageCursorId,
             @QueryParam("downScroll") boolean downScroll,

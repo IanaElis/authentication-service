@@ -5,6 +5,7 @@ import com.alex.project.dtos.chat.ChatMessageElement;
 import com.alex.project.dtos.chat.ChatroomEventfulElement;
 import com.alex.project.dtos.chat.ChatroomOverview;
 import com.alex.project.dtos.chat.ChatroomUserDetails;
+import io.smallrye.mutiny.Uni;
 import jakarta.validation.constraints.Positive;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -33,11 +34,11 @@ public interface ChatServiceRestClient {
 
     @PUT
     @Path("/chat-messages/update")
-    Response updateMessage(MessageUpdateRequest request);
+    Uni<Response> updateMessage(MessageUpdateRequest request);
 
     @PUT
     @Path("/chat-messages/archive")
-    Response archiveMessage(MessageRemoveRequest request);
+    Uni<Response> archiveMessage(MessageRemoveRequest request);
 
     public record CreateChatroomRequest(
             long requestingUserId,
@@ -47,33 +48,33 @@ public interface ChatServiceRestClient {
 
     @GET
     @Path("/chat-messages/page")
-    ContentPage<ChatMessageElement> getMessagePage(@QueryParam("requesterUserId") @Positive long requesterUserId,
-                                                   @QueryParam("chatroomId") @Positive int chatroomId,
-                                                   @QueryParam("messageCursorId") Long messageCursorId,
-                                                   @QueryParam("downScroll") boolean downScroll,
-                                                   @QueryParam("initialRequest") boolean initialRequest);
+    Uni<ContentPage<ChatMessageElement>> getMessagePage(@QueryParam("requesterUserId") @Positive long requesterUserId,
+                                                         @QueryParam("chatroomId") @Positive int chatroomId,
+                                                         @QueryParam("messageCursorId") Long messageCursorId,
+                                                         @QueryParam("downScroll") boolean downScroll,
+                                                         @QueryParam("initialRequest") boolean initialRequest);
 
     @POST
     @Path("/chatrooms/create")
-    Integer createChatroom(CreateChatroomRequest request);
+    Uni<Integer> createChatroom(CreateChatroomRequest request);
 
     @PUT
     @Path("/chatrooms/{chatroomId}/archive")
-    Response archiveChatroom(
+    Uni<Response> archiveChatroom(
             @QueryParam("userId") long requestingUserId,
             @PathParam("chatroomId") int chatroomId
     );
 
     @GET
     @Path("/chatrooms/{chatroomId}")
-    ChatroomOverview getChatroomOverview(
+    Uni<ChatroomOverview> getChatroomOverview(
             @QueryParam("userId") long requestingUserId,
             @PathParam("chatroomId") int chatroomId
     );
 
     @GET
     @Path("/chatrooms/events")
-    ContentPage<ChatroomEventfulElement> loadChatroomEventfulElements(
+    Uni<ContentPage<ChatroomEventfulElement>> loadChatroomEventfulElements(
             @QueryParam("userId") long userId,
             @QueryParam("latestEventTimeOnPage") String latestEventTimeOnPage,
             @QueryParam("latestChatroomIdOnPage") Integer latestChatroomIdOnPage,
@@ -82,7 +83,7 @@ public interface ChatServiceRestClient {
 
     @GET
     @Path("/chatrooms/user")
-    List<Integer> getChatroomIdsForUser(@QueryParam("userId") long requestingUserId);
+    Uni<List<Integer>> getChatroomIdsForUser(@QueryParam("userId") long requestingUserId);
 
     public record AddUsersRequest(Map<Long, String> usersWithRoles) {}
 
@@ -94,7 +95,7 @@ public interface ChatServiceRestClient {
 
     @GET
     @Path("/chatroom-users/{chatroomId}/users")
-    ContentPage<ChatroomUserDetails> getUsers(
+    Uni<ContentPage<ChatroomUserDetails>> getUsers(
             @QueryParam("userId") long requestingUserId,
             @QueryParam("oldestAdditionTimestamp") String oldestAdditionTimestamp,
             @QueryParam("oldestAdditionId") Integer oldestAdditionId,
@@ -103,7 +104,7 @@ public interface ChatServiceRestClient {
 
     @POST
     @Path("/chatroom-users/{chatroomId}/users")
-    Response addUsers(
+    Uni<Response> addUsers(
             @QueryParam("userId") long requestingUserId,
             @PathParam("chatroomId") int chatroomId,
             AddUsersRequest request
@@ -111,7 +112,7 @@ public interface ChatServiceRestClient {
 
     @PUT
     @Path("/chatroom-users/{chatroomId}/users/{affectedUserId}/role")
-    Response changeUserRole(
+    Uni<Response> changeUserRole(
             @QueryParam("userId") long requestingUserId,
             @PathParam("chatroomId") int chatroomId,
             @PathParam("affectedUserId") long affectedUserId,
@@ -120,7 +121,7 @@ public interface ChatServiceRestClient {
 
     @PUT
     @Path("/chatroom-users/{chatroomId}/users/membership-status")
-    Response changeUserMembershipStatus(
+    Uni<Response> changeUserMembershipStatus(
             @QueryParam("userId") long requestingUserId,
             @QueryParam("affectedUserId") long affectedUserId,
             @PathParam("chatroomId") int chatroomId,
@@ -129,7 +130,7 @@ public interface ChatServiceRestClient {
 
     @PUT
     @Path("/chatroom-users/{chatroomId}/users/update-last-read")
-    Response updateLastRead(
+    Uni<Response> updateLastRead(
             @PathParam("chatroomId") int chatroomId,
             @QueryParam("userId") long userId,
             UpdateLastReadStateRequest request
@@ -137,7 +138,7 @@ public interface ChatServiceRestClient {
 
     @PUT
     @Path("/{chatroomId}/name")
-    Response updateChatroomName(
+    Uni<Response> updateChatroomName(
             @PathParam("chatroomId") @Positive int chatroomId,
             @QueryParam("userId") @Positive long userId,
             @QueryParam("newName") String newName);

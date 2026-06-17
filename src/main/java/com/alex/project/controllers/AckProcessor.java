@@ -5,11 +5,11 @@ import com.alex.project.dtos.chat.ChatMessageOperationalData;
 import com.alex.project.dtos.chat.enums.AckStatus;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.context.RequestScoped;
-import jakarta.enterprise.context.control.ActivateRequestContext;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.slf4j.Logger;
@@ -34,10 +34,14 @@ public class AckProcessor {
     @Incoming("chat-message-response")
     public void ackMessages(JsonObject res) {
 
-        ensureOk(chatWsRestClient.ackResult(objectMapper.convertValue(
+        Uni<Response> ackUni = chatWsRestClient.ackResult(objectMapper.convertValue(
                 res.getMap(),
                 new TypeReference<Map<AckStatus, List<ChatMessageOperationalData>>>() {}
-        )), "Unable to Acknowledge messages", LOG);
+        ));
 
+        ackUni.subscribe().with(
+                response -> ensureOk(response, "Unable to Acknowledge messages", LOG),
+                failure -> LOG.error("Failed to ack messages", failure)
+        );
     }
 }

@@ -5,6 +5,8 @@ import com.alex.project.services.AuthService;
 import io.quarkus.security.Authenticated;
 import io.smallrye.jwt.auth.principal.JWTParser;
 import io.smallrye.jwt.auth.principal.ParseException;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -30,49 +32,51 @@ public class LoginController {
     @POST
     @Path("/login")
     @PermitAll
-    public Response login(@Valid LoginDto loginDto) throws ParseException {
+    public Uni<Response> login(@Valid LoginDto loginDto) {
+        return Uni.createFrom().item(() -> {
+            String token = authService.login(loginDto);
+            try {
+                JsonWebToken jwtParsed = parser.parse(token);
 
-        String token = authService.login(loginDto);
-        JsonWebToken jwtParsed = parser.parse(token);
+                NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+                        .value(token)
+                        .path("/")
+                        .httpOnly(true)
+                        .secure(false)
+                        .maxAge(3600)
+                        .sameSite(NewCookie.SameSite.LAX)
+                        .build();
 
-        String username = jwtParsed.getSubject();
-
-        NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
-                .value(token)
-                .path("/")
-                .httpOnly(true)
-                .secure(false)
-                .maxAge(3600)
-                .sameSite(NewCookie.SameSite.LAX)
-                .build();
-
-        parser.parse(token).getClaim("userid").toString();
-
-        return Response.ok(jwtParsed.getClaim("userid").toString()).cookie(jwtCookie).build();
+                return Response.ok(jwtParsed.getClaim("userid").toString()).cookie(jwtCookie).build();
+            } catch (ParseException e) {
+                throw new RuntimeException("Failed to parse JWT token", e);
+            }
+        }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
-
 
     @GET
     @Path("/logout")
     @PermitAll
-    public Response logout() throws ParseException {
-
-        NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
-                .value("")
-                .path("/")
-                .httpOnly(true)
-                .secure(false)
-                .maxAge(0)
-                .sameSite(NewCookie.SameSite.LAX)
-                .build();
-        return Response.ok().cookie(jwtCookie).build();
+    public Uni<Response> logout() {
+        return Uni.createFrom().item(() -> {
+            NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
+                    .value("")
+                    .path("/")
+                    .httpOnly(true)
+                    .secure(false)
+                    .maxAge(0)
+                    .sameSite(NewCookie.SameSite.LAX)
+                    .build();
+            return Response.ok().cookie(jwtCookie).build();
+        });
     }
 
     @GET
     @Path("/me")
     @Authenticated
-    public Response checkLogin() {
-        return Response.ok(jwt.getClaim("userid").toString()).build();
+    public Uni<Response> checkLogin() {
+        return Uni.createFrom().item(() ->
+                Response.ok(jwt.getClaim("userid").toString()).build());
     }
 
 }

@@ -12,6 +12,7 @@ import com.alex.project.exceptions.UserNotFoundException;
 import com.alex.project.repositories.UserRepository;
 import com.alex.project.utils.JwtService;
 import io.quarkus.elytron.security.common.BcryptUtil;
+import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -37,8 +38,17 @@ public class AuthServiceTest {
     @InjectMocks
     AuthService authService;
 
+    private static long idCounter = 1L;
+
     public AuthServiceTest() {
         MockitoAnnotations.openMocks(this);
+        doAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            if (user.getId() == null) {
+                user.setId(idCounter++);
+            }
+            return null;
+        }).when(userRepository).persistAndFlush(any(User.class));
     }
 
     @Nested
@@ -103,7 +113,7 @@ public class AuthServiceTest {
 
             try (MockedStatic<BcryptUtil> mocked = mockStatic(BcryptUtil.class)) {
                 mocked.when(() -> BcryptUtil.bcryptHash(registrationDto.getPassword())).thenReturn("hash");
-                when(userServiceClient.createProfile(any(CreateProfileDto.class))).thenReturn(response);
+                when(userServiceClient.createProfile(any(CreateProfileDto.class))).thenReturn(Uni.createFrom().item(response));
 
                 String result = authService.registration(registrationDto);
 

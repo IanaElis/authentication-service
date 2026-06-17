@@ -1,6 +1,7 @@
 package com.alex.project.clients;
 
 import com.alex.project.dtos.user.*;
+import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
@@ -15,29 +16,29 @@ public interface UserServiceClient {
 
     @POST
     @Path("/profiles")
-    Response createProfile(CreateProfileDto request);
+    Uni<Response> createProfile(CreateProfileDto request);
 
     @POST
     @Path("/profiles/get")
-    Response getProfile(SearchUser email);
+    Uni<Response> getProfile(SearchUser email);
 
     @POST
     @Path("/profiles/update")
-    Response updateProfile(ProfileDto profile, @HeaderParam("X-USER-EMAIL") String email);
+    Uni<Response> updateProfile(ProfileDto profile, @HeaderParam("X-USER-EMAIL") String email);
 
     @GET
     @Path("/field/all")
-    Response getAllFields();
+    Uni<Response> getAllFields();
 
     @POST
     @Path("/field/new")
-    Response addNewField(FieldDto dto);
+    Uni<Response> addNewField(FieldDto dto);
 
     @GET
     @Path("/specialty/all")
-    Response getAllSpecialty();
+    Uni<Response> getAllSpecialty();
 
     @POST
     @Path("/specialty/new")
-    Response addNewSpecialty(SpecialtyDto dto);
+    Uni<Response> addNewSpecialty(SpecialtyDto dto);
 }

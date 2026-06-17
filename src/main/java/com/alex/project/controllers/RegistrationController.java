@@ -6,6 +6,8 @@ import com.alex.project.services.AuthService;
 import io.quarkus.security.Authenticated;
 import io.smallrye.jwt.auth.principal.JWTParser;
 import io.smallrye.jwt.auth.principal.ParseException;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -36,8 +38,8 @@ public class RegistrationController {
     @POST
     @Path("/user")
     @PermitAll
-    public Response register(@Valid RegistrationDto registrationDto) throws ParseException {
-        try {
+    public Uni<Response> register(@Valid RegistrationDto registrationDto) {
+        return Uni.createFrom().item(() -> {
             String token = authService.registration(registrationDto);
 
             NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
@@ -49,22 +51,25 @@ public class RegistrationController {
                     .sameSite(NewCookie.SameSite.LAX)
                     .build();
 
-
-            return Response
-                    .ok(parser.parse(token).getClaim("userid").toString())
-                    .cookie(jwtCookie).build();
-
-        } catch (Exception e) {
+            try {
+                return Response
+                        .ok(parser.parse(token).getClaim("userid").toString())
+                        .cookie(jwtCookie).build();
+            } catch (ParseException e) {
+                throw new RuntimeException("Failed to parse JWT token", e);
+            }
+        }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
+        .onFailure().recoverWithItem(e -> {
             log.error("Error while registering user", e);
             return Response.serverError().build();
-        }
+        });
     }
 
     @POST
     @Path("/moderator")
     @RolesAllowed("ADMIN")
-    public Response registerModerator(@Valid RegistrationDto registrationDto){
-        try {
+    public Uni<Response> registerModerator(@Valid RegistrationDto registrationDto) {
+        return Uni.createFrom().item(() -> {
             String token = authService.registrationModerator(registrationDto);
 
             NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
@@ -76,20 +81,25 @@ public class RegistrationController {
                     .sameSite(NewCookie.SameSite.LAX)
                     .build();
 
-            return Response
-                    .ok(parser.parse(token).getClaim("userid").toString())
-                    .cookie(jwtCookie).build();
-        } catch (Exception e) {
+            try {
+                return Response
+                        .ok(parser.parse(token).getClaim("userid").toString())
+                        .cookie(jwtCookie).build();
+            } catch (ParseException e) {
+                throw new RuntimeException("Failed to parse JWT token", e);
+            }
+        }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
+        .onFailure().recoverWithItem(e -> {
             log.error("Error while registering moderator", e);
             return Response.serverError().build();
-        }
+        });
     }
 
     @POST
     @Path("/admin")
     @RolesAllowed("INNER")
-    public Response registerAdmin(@Valid RegistrationDto registrationDto){
-        try {
+    public Uni<Response> registerAdmin(@Valid RegistrationDto registrationDto) {
+        return Uni.createFrom().item(() -> {
             String token = authService.registrationAdmin(registrationDto);
 
             NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
@@ -101,14 +111,18 @@ public class RegistrationController {
                     .sameSite(NewCookie.SameSite.LAX)
                     .build();
 
-            return Response
-                    .ok(parser.parse(token).getClaim("userid").toString())
-                    .cookie(jwtCookie).build();
-        } catch (Exception e) {
+            try {
+                return Response
+                        .ok(parser.parse(token).getClaim("userid").toString())
+                        .cookie(jwtCookie).build();
+            } catch (ParseException e) {
+                throw new RuntimeException("Failed to parse JWT token", e);
+            }
+        }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
+        .onFailure().recoverWithItem(e -> {
             log.error("Error while registering admin", e);
             return Response.serverError().build();
-        }
+        });
     }
-
 
 }

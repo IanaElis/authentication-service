@@ -6,6 +6,7 @@ import com.alex.project.dtos.user.ProfileDto;
 import com.alex.project.dtos.user.SearchUser;
 import com.alex.project.dtos.user.SpecialtyDto;
 import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Uni;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -26,43 +27,41 @@ public class UserGatewayController {
     @RestClient
     UserServiceClient client;
 
-
-
     @POST
     @Path("/profiles/get")
-    public Response getProfile(@Valid SearchUser email){
+    public Uni<Response> getProfile(@Valid SearchUser email) {
         return client.getProfile(email);
     }
 
     @POST
     @Path("/profiles/update")
-    public Response updateProfile(@Valid ProfileDto profile, @HeaderParam("X-USER-EMAIL") String email){
+    public Uni<Response> updateProfile(@Valid ProfileDto profile, @HeaderParam("X-USER-EMAIL") String email) {
         return client.updateProfile(profile, email);
     }
 
     @GET
     @Path("/field/all")
-    public Response getAllFields(){
+    public Uni<Response> getAllFields() {
         return client.getAllFields();
     }
 
     @POST
     @Path("/field/new")
     @RolesAllowed("MODERATOR")
-    public Response addNewField(@Valid FieldDto dto){
+    public Uni<Response> addNewField(@Valid FieldDto dto) {
         return client.addNewField(dto);
     }
 
     @GET
     @Path("/specialty/all")
-    public Response getAllSpecialty(){
+    public Uni<Response> getAllSpecialty() {
         return client.getAllSpecialty();
     }
 
     @POST
     @Path("/specialty/new")
     @RolesAllowed("ADMIN")
-    public Response addNewSpecialty(@Valid SpecialtyDto dto){
+    public Uni<Response> addNewSpecialty(@Valid SpecialtyDto dto) {
         return client.addNewSpecialty(dto);
     }
 }
