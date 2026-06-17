@@ -6,13 +6,15 @@ import com.alex.project.dtos.user.ProfileDto;
 import com.alex.project.dtos.user.SearchUser;
 import com.alex.project.dtos.user.SpecialtyDto;
 import io.quarkus.security.Authenticated;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 import io.smallrye.mutiny.Uni;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
-import jakarta.ws.rs.*;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
@@ -25,23 +27,16 @@ public class UserGatewayController {
     @RestClient
     UserServiceClient client;
 
-    @Inject
-    JsonWebToken jwt;
-
     @POST
     @Path("/profiles/get")
     public Uni<Response> getProfile(@Valid SearchUser email) {
-        // TODO: resolve userId from email first, then call getProfile
-        return client.getAllFields(); // placeholder
+        return client.getProfile(email);
     }
 
-    @PUT
-    @Path("/profiles/update/{userId}")
-    public Uni<Response> updateProfile(
-            @PathParam("userId") long userId,
-            @Valid ProfileDto profile
-    ) {
-        return client.updateProfile(userId, profile);
+    @POST
+    @Path("/profiles/update")
+    public Uni<Response> updateProfile(@Valid ProfileDto profile, @HeaderParam("X-USER-EMAIL") String email) {
+        return client.updateProfile(profile, email);
     }
 
     @GET
