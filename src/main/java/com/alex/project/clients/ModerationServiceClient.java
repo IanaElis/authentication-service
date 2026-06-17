@@ -15,4 +15,8 @@ public interface ModerationServiceClient {
     @POST
     @Path("/moderationResponse/{moderationId}/accept")
     Uni<Response> accept(@PathParam("moderationId") Long moderationId, @HeaderParam("X-USER-EMAIL") String email);
+
+    @POST
+    @Path("/moderationResponse/{moderationId}/reject")
+    Uni<Response> reject(@PathParam("moderationId") Long moderationId, @HeaderParam("X-USER-EMAIL") String email, @QueryParam("reason") String reason);
 }

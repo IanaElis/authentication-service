@@ -2,43 +2,40 @@ package com.alex.project.clients;
 
 import com.alex.project.dtos.user.*;
 import io.smallrye.mutiny.Uni;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 
-@Path("/internal")
+@Path("/api/v1/users")
 @RegisterRestClient(configKey = "user-service")
 public interface UserServiceClient {
 
     @POST
-    @Path("/profiles")
     Uni<Response> createProfile(CreateProfileDto request);
 
     @POST
-    @Path("/profiles/get")
-    Uni<Response> getProfile(SearchUser email);
+    @Path("/profile")
+    Uni<Response> getProfile(@QueryParam("requesterId") long requesterId, @QueryParam("targetUserId") long targetUserId);
 
-    @POST
-    @Path("/profiles/update")
-    Uni<Response> updateProfile(ProfileDto profile, @HeaderParam("X-USER-EMAIL") String email);
+    @PUT
+    @Path("/{userId}/update-request")
+    Uni<Response> updateProfile(@PathParam("userId") long userId, ProfileDto profile);
 
+    // Field and specialty management stubs — not yet implemented on user-service
     @GET
-    @Path("/field/all")
+    @Path("/fields")
     Uni<Response> getAllFields();
 
     @POST
-    @Path("/field/new")
+    @Path("/fields")
     Uni<Response> addNewField(FieldDto dto);
 
     @GET
-    @Path("/specialty/all")
+    @Path("/specialties")
     Uni<Response> getAllSpecialty();
 
     @POST
-    @Path("/specialty/new")
+    @Path("/specialties")
     Uni<Response> addNewSpecialty(SpecialtyDto dto);
 }
