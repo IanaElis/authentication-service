@@ -11,11 +11,14 @@ import com.alex.project.exceptions.UserNotFoundException;
 import com.alex.project.repositories.UserRepository;
 import com.alex.project.utils.JwtService;
 import io.quarkus.elytron.security.common.BcryptUtil;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
+
+import java.time.Duration;
 
 @ApplicationScoped
 public class AuthService {
@@ -31,60 +34,29 @@ public class AuthService {
     UserServiceClient userServiceClient;
 
     @Transactional
-    public String login(LoginDto loginDto) {
+    public User authenticate(LoginDto loginDto) {
         User user =
                 userRepository.findByUsername(loginDto.getUsername())
                         .orElseThrow(() -> new UserNotFoundException("Error"));
         if(!BcryptUtil.matches(loginDto.getPassword(), user.getPassword())) {
             throw new SecurityException("Error");
         }
-
-        return jwtService.jwtGenerator(user.getUsername(), user.getRole(), user.getId());
+        return user;
     }
 
     @Transactional
-    public String registration(RegistrationDto registrationDto) {
-        User user = userCreation(registrationDto, Role.USER);
+    public User registerUser(RegistrationDto registrationDto, Role role) {
+        User user = userCreation(registrationDto, role);
 
         CreateProfileDto createProfileDto = new CreateProfileDto(user.getUsername(), user.getId());
 
-//        Response response = userServiceClient.createProfile(createProfileDto);
+        Uni<Response> response = userServiceClient.createProfile(createProfileDto);
 
-//        if (response.getStatus() >= 300) {
-//            throw new RuntimeException("Profile creation failed");
-//        }
+        if (response.await().atMost(Duration.ofSeconds(15L)).getStatus() >= 300) {
+            throw new RuntimeException("Profile creation failed");
+        }
 
-        return jwtService.jwtGenerator(user.getUsername(), Role.USER, user.getId());
-    }
-
-    @Transactional
-    public String registrationAdmin(RegistrationDto registrationDto){
-        User user = userCreation(registrationDto, Role.ADMIN);
-
-        CreateProfileDto createProfileDto = new CreateProfileDto(user.getUsername(), user.getId());
-
-//        Response response = userServiceClient.createProfile(createProfileDto);
-//
-//        if (response.getStatus() >= 300) {
-//            throw new RuntimeException("Profile creation failed");
-//        }
-
-        return jwtService.jwtGenerator(user.getUsername(), Role.ADMIN, user.getId());
-    }
-
-    @Transactional
-    public String registrationModerator(RegistrationDto registrationDto){
-        User user = userCreation(registrationDto, Role.MODERATOR);
-
-        CreateProfileDto createProfileDto = new CreateProfileDto(user.getUsername(), user.getId());
-
-//        Response response = userServiceClient.createProfile(createProfileDto);
-//
-//        if (response.getStatus() >= 300) {
-//            throw new RuntimeException("Profile creation failed");
-//        }
-
-        return jwtService.jwtGenerator(user.getUsername(), Role.MODERATOR, user.getId());
+        return user;
     }
 
     private User userCreation(RegistrationDto registrationDto, Role role) {

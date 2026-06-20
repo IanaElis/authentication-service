@@ -2,10 +2,9 @@ package com.alex.project.controllers;
 
 import com.alex.project.dtos.RegistrationDto;
 import com.alex.project.entiies.Role;
+import com.alex.project.entiies.User;
 import com.alex.project.services.AuthService;
 import io.quarkus.security.Authenticated;
-import io.smallrye.jwt.auth.principal.JWTParser;
-import io.smallrye.jwt.auth.principal.ParseException;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.annotation.security.PermitAll;
@@ -17,7 +16,6 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,35 +27,24 @@ import org.slf4j.LoggerFactory;
 public class RegistrationController {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrationController.class);
+
     @Inject
     AuthService authService;
 
     @Inject
-    JWTParser parser;
+    SessionBootstrapper sessionBootstrapper;
 
     @POST
     @Path("/user")
     @PermitAll
     public Uni<Response> register(@Valid RegistrationDto registrationDto) {
+        if (!registrationDto.isValidPassword()) {
+            return Uni.createFrom().item(() -> Response.status(400)
+                .entity("Password must be 8+ chars with 1 letter and 1 uppercase").build());
+        }
         return Uni.createFrom().item(() -> {
-            String token = authService.registration(registrationDto);
-
-            NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
-                    .value(token)
-                    .path("/")
-                    .httpOnly(true)
-                    .secure(false)
-                    .maxAge(3600)
-                    .sameSite(NewCookie.SameSite.LAX)
-                    .build();
-
-            try {
-                return Response
-                        .ok(parser.parse(token).getClaim("userid").toString())
-                        .cookie(jwtCookie).build();
-            } catch (ParseException e) {
-                throw new RuntimeException("Failed to parse JWT token", e);
-            }
+            User user = authService.registerUser(registrationDto, Role.USER);
+            return sessionBootstrapper.bootstrap(user, "SIGNUP").response();
         }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
         .onFailure().recoverWithItem(e -> {
             log.error("Error while registering user", e);
@@ -69,25 +56,13 @@ public class RegistrationController {
     @Path("/moderator")
     @RolesAllowed("ADMIN")
     public Uni<Response> registerModerator(@Valid RegistrationDto registrationDto) {
+        if (!registrationDto.isValidPassword()) {
+            return Uni.createFrom().item(() -> Response.status(400)
+                .entity("Password must be 8+ chars with 1 letter and 1 uppercase").build());
+        }
         return Uni.createFrom().item(() -> {
-            String token = authService.registrationModerator(registrationDto);
-
-            NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
-                    .value(token)
-                    .path("/")
-                    .httpOnly(true)
-                    .secure(false)
-                    .maxAge(3600)
-                    .sameSite(NewCookie.SameSite.LAX)
-                    .build();
-
-            try {
-                return Response
-                        .ok(parser.parse(token).getClaim("userid").toString())
-                        .cookie(jwtCookie).build();
-            } catch (ParseException e) {
-                throw new RuntimeException("Failed to parse JWT token", e);
-            }
+            User user = authService.registerUser(registrationDto, Role.MODERATOR);
+            return sessionBootstrapper.bootstrap(user, "SIGNUP").response();
         }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
         .onFailure().recoverWithItem(e -> {
             log.error("Error while registering moderator", e);
@@ -99,30 +74,17 @@ public class RegistrationController {
     @Path("/admin")
     @RolesAllowed("INNER")
     public Uni<Response> registerAdmin(@Valid RegistrationDto registrationDto) {
+        if (!registrationDto.isValidPassword()) {
+            return Uni.createFrom().item(() -> Response.status(400)
+                .entity("Password must be 8+ chars with 1 letter and 1 uppercase").build());
+        }
         return Uni.createFrom().item(() -> {
-            String token = authService.registrationAdmin(registrationDto);
-
-            NewCookie jwtCookie = new NewCookie.Builder("JwtToken")
-                    .value(token)
-                    .path("/")
-                    .httpOnly(true)
-                    .secure(false)
-                    .maxAge(3600)
-                    .sameSite(NewCookie.SameSite.LAX)
-                    .build();
-
-            try {
-                return Response
-                        .ok(parser.parse(token).getClaim("userid").toString())
-                        .cookie(jwtCookie).build();
-            } catch (ParseException e) {
-                throw new RuntimeException("Failed to parse JWT token", e);
-            }
+            User user = authService.registerUser(registrationDto, Role.ADMIN);
+            return sessionBootstrapper.bootstrap(user, "SIGNUP").response();
         }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
         .onFailure().recoverWithItem(e -> {
             log.error("Error while registering admin", e);
             return Response.serverError().build();
         });
     }
-
 }
