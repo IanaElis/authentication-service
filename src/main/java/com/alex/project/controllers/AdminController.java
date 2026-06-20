@@ -1,11 +1,9 @@
 package com.alex.project.controllers;
 
-import com.alex.project.entiies.Role;
 import com.alex.project.entiies.User;
 import com.alex.project.repositories.UserRepository;
 import com.alex.project.services.AuthService;
 import io.quarkus.elytron.security.common.BcryptUtil;
-import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.annotation.security.RolesAllowed;

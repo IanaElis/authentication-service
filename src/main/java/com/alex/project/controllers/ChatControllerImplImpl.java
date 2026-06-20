@@ -6,6 +6,7 @@ import com.alex.project.dtos.ContentPage;
 import com.alex.project.dtos.chat.*;
 import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -59,7 +60,7 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
                 latestEventTime,
                 latestChatroomId,
                 latestChatMessageId
-        );
+        ).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @POST
@@ -75,7 +76,8 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
         return subscribeUni
                 .invoke(response -> ensureOk(response,
                         "Unable to subscribe user to chatrooms", LOG))
-                .map(r -> Response.ok(r).build());
+                .map(r -> Response.ok(r).build())
+            .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @POST
@@ -91,7 +93,8 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
         return subscribeUni
                 .invoke(response -> ensureOk(response,
                         "Unable to subscribe user to chatroom " + chatroomId, LOG))
-                .map(r -> Response.ok().build());
+                .map(r -> Response.ok().build())
+            .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @POST
@@ -121,7 +124,7 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
 
             emitter.send(chatMessageOperationalData);
             return Response.ok().build();
-        });
+        }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @PUT
@@ -152,7 +155,8 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
         return broadcastUni
                 .invoke(response -> ensureOk(response,
                         "Unable to broadcast message update", LOG))
-                .map(r -> Response.ok().build());
+                .map(r -> Response.ok().build())
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @PUT
@@ -182,7 +186,8 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
         return broadcastUni
                 .invoke(response -> ensureOk(response,
                         "Unable to broadcast message archive", LOG))
-                .map(r -> Response.ok().build());
+                .map(r -> Response.ok().build())
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @POST
@@ -195,7 +200,8 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
                         request.name()
                 );
 
-        return chatServiceRestClient.createChatroom(enriched);
+        return chatServiceRestClient.createChatroom(enriched)
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @PUT
@@ -205,7 +211,8 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
         return chatServiceRestClient.archiveChatroom(currentUserId(token), chatroomId)
                 .invoke(response -> ensureOk(response,
                         "Unable to archive chatroom " + chatroomId, LOG))
-                .map(r -> Response.ok().build());
+                .map(r -> Response.ok().build())
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @GET
@@ -215,7 +222,7 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
         return chatServiceRestClient.getChatroomOverview(
                 currentUserId(token),
                 chatroomId
-        );
+        ).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @GET
@@ -231,7 +238,7 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
                 oldestAdditionTimestamp,
                 oldestAdditionId,
                 chatroomId
-        );
+        ).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @POST
@@ -260,7 +267,8 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
         return broadcastUni
                 .invoke(response -> ensureOk(response,
                         "Unable to broadcast user addition for chatroom " + chatroomId, LOG))
-                .map(r -> Response.ok().build());
+                .map(r -> Response.ok().build())
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @PUT
@@ -278,7 +286,8 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
                         request)
                 .invoke(response -> ensureOk(response,
                         "Unable to change user role", LOG))
-                .map(r -> Response.ok().build());
+                .map(r -> Response.ok().build())
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @PUT
@@ -290,7 +299,8 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
         return chatServiceRestClient.updateLastRead(
                 chatroomId,
                 currentUserId(token),
-                new ChatServiceRestClient.UpdateLastReadStateRequest(messageId, Long.toString(timestamp)));
+                new ChatServiceRestClient.UpdateLastReadStateRequest(messageId, Long.toString(timestamp)))
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @PUT
@@ -308,7 +318,8 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
                         request)
                 .invoke(response -> ensureOk(response,
                         "Unable to change membership status", LOG))
-                .map(r -> Response.ok().build());
+                .map(r -> Response.ok().build())
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @PUT
@@ -324,7 +335,8 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
                         newName)
                 .invoke(response -> ensureOk(response,
                         "Unable to update chatroom name", LOG))
-                .map(r -> Response.ok().build());
+                .map(r -> Response.ok().build())
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @GET
@@ -342,7 +354,7 @@ public class ChatControllerImplImpl implements ChatControllerImpl {
                 messageCursorId,
                 downScroll,
                 initialRequest
-        );
+        ).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
 }

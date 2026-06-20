@@ -87,6 +87,10 @@ public interface FriendServiceApiClient {
     @Path("/add-blacklist")
     Uni<Boolean> addUserToBlacklist(BlockAction action);
 
+    @POST
+    @Path("/remove-blacklist")
+    Uni<Boolean> removeUserFromBlacklist(BlockAction action);
+
     @GET
     @Path("{userA}/{userB}/is-blocked")
     Uni<Boolean> checkIfBlocked(

@@ -4,6 +4,7 @@ import com.alex.project.clients.FriendServiceApiClient;
 import com.alex.project.dtos.people.FriendRequestDto;
 import com.alex.project.dtos.people.PersonDto;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -40,7 +41,8 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while creating user", e);
                     throw new BadRequestException("Unable to create user.");
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @PUT
@@ -57,7 +59,8 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while updating name", e);
                     throw new BadRequestException("Unable to update name.");
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @GET
@@ -72,7 +75,8 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while searching people", e);
                     return Collections.emptyList();
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @GET
@@ -86,7 +90,8 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while fetching friends", e);
                     return Collections.emptyList();
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @GET
@@ -99,7 +104,8 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while fetching all friends", e);
                     return Collections.emptyList();
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @GET
@@ -114,7 +120,8 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while fetching common friends", e);
                     return Collections.emptyList();
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @GET
@@ -128,7 +135,8 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while fetching incoming requests", e);
                     return Collections.emptyList();
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @GET
@@ -142,7 +150,8 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while fetching outgoing requests", e);
                     return Collections.emptyList();
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @GET
@@ -156,7 +165,8 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while fetching blocked users", e);
                     return Collections.emptyList();
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @POST
@@ -172,7 +182,8 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while sending friend request", e);
                     throw new BadRequestException("Unable to send friend request.");
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @POST
@@ -185,7 +196,8 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while removing friend request", e);
                     throw new BadRequestException("Unable to remove friend request.");
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @POST
@@ -198,7 +210,8 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while deleting friend", e);
                     throw new BadRequestException("Unable to delete friend.");
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @POST
@@ -214,7 +227,24 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while blocking user", e);
                     throw new BadRequestException("Unable to block user.");
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+    }
+
+    @POST
+    @Path("/remove-blacklist")
+    public Uni<Boolean> removeUserFromBlacklist(FriendServiceApiClient.BlockAction action) {
+        if (action == null
+                || action.blocker <= 0
+                || action.blocked <= 0) {
+            throw new BadRequestException("Invalid unblock request.");
+        }
+        return client.removeUserFromBlacklist(action)
+                .onFailure().recoverWithItem(e -> {
+                    LOG.error("Error while unblocking user", e);
+                    throw new BadRequestException("Unable to unblock user.");
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     @GET
@@ -228,6 +258,7 @@ public class FriendController {
                 .onFailure().recoverWithItem(e -> {
                     LOG.error("Error while checking block status", e);
                     throw new BadRequestException("Unable to check block status.");
-                });
+                })
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 }
