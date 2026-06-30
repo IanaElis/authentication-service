@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 @Path("/auth/signup")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@Authenticated
 public class RegistrationController {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrationController.class);
@@ -48,6 +47,7 @@ public class RegistrationController {
         }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
         .onFailure().recoverWithItem(e -> {
             log.error("Error while registering user", e);
+            authService.removeUser(registrationDto);
             return Response.serverError().build();
         });
     }
@@ -66,6 +66,7 @@ public class RegistrationController {
         }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
         .onFailure().recoverWithItem(e -> {
             log.error("Error while registering moderator", e);
+            authService.removeUser(registrationDto);
             return Response.serverError().build();
         });
     }
@@ -84,6 +85,7 @@ public class RegistrationController {
         }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
         .onFailure().recoverWithItem(e -> {
             log.error("Error while registering admin", e);
+            authService.removeUser(registrationDto);
             return Response.serverError().build();
         });
     }

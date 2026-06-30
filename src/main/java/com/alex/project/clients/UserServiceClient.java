@@ -14,9 +14,14 @@ public interface UserServiceClient {
     @POST
     Uni<Response> createProfile(CreateProfileDto request);
 
+    @POST
+    @Path("/profile")
+    Uni<Response> getProfileById(@QueryParam("requesterId") long requesterId,
+                                  @QueryParam("targetUserId") long targetUserId);
+
     @GET
     @Path("/profile/by-email/{email}")
-    Uni<Response> getProfile(@PathParam("email") String email, @QueryParam("requesterId") long requesterId);
+    Uni<Response> getProfileByEmail(@PathParam("email") String email, @QueryParam("requesterId") long requesterId);
 
     @PUT
     @Path("/{userId}/update-request")
@@ -35,8 +40,8 @@ public interface UserServiceClient {
     Uni<Response> addNewField(FieldDto dto);
 
     @DELETE
-    @Path("/field/{id}")
-    Uni<Response> deleteField(@PathParam("id") Long id);
+    @Path("/field")
+    Uni<Response> deleteField(String code);
 
     @GET
     @Path("/departments")

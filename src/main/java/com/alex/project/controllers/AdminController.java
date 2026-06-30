@@ -44,7 +44,7 @@ public class AdminController {
 
     @GET
     @Path("/users")
-    @RolesAllowed("ADMIN")
+    @RolesAllowed({"ADMIN", "MODERATOR"})
     public Uni<Response> listUsers() {
         return Uni.createFrom().item(() -> {
             List<UserInfo> users = userRepository.listAll().stream()

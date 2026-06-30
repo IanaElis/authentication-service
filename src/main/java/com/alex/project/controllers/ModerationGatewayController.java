@@ -3,7 +3,6 @@ package com.alex.project.controllers;
 import com.alex.project.clients.ModerationServiceClient;
 import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;
-import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -14,7 +13,6 @@ import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 @Path("/moderation")
 @ApplicationScoped
-@Authenticated
 @RolesAllowed({"ADMIN", "MODERATOR"})
 public class ModerationGatewayController {
 
@@ -28,16 +26,14 @@ public class ModerationGatewayController {
     @GET
     @Path("/all")
     public Uni<Response> getAllModerationRequests() {
-        return client.getAllModerationRequests()
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return client.getAllModerationRequests();
     }
 
     @POST
     @Path("/{moderationId}/accept")
     public Uni<Response> accept(@PathParam("moderationId") Long moderationId) {
         String username = jwt.getSubject();
-        return client.accept(moderationId, username)
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return client.accept(moderationId, username);
     }
 
     @POST
@@ -46,7 +42,6 @@ public class ModerationGatewayController {
             @PathParam("moderationId") Long moderationId,
             @QueryParam("reason") String reason) {
         String username = jwt.getSubject();
-        return client.reject(moderationId, username, reason)
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return client.reject(moderationId, username, reason);
     }
 }

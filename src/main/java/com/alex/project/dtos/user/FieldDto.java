@@ -5,5 +5,5 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
-public record FieldDto(@NotBlank String name, @Positive int number) {
+public record FieldDto(@NotBlank String fieldCode, @NotBlank String fieldName) {
 }

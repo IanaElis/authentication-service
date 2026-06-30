@@ -14,7 +14,9 @@ import io.quarkus.elytron.security.common.BcryptUtil;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.servlet.Registration;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
@@ -73,5 +75,13 @@ public class AuthService {
         userRepository.persistAndFlush(user);
 
         return user;
+    }
+
+    public void removeUser(RegistrationDto dto) {
+        User user = userRepository.findByUsername(dto.getUsername())
+                .orElseThrow(() -> new UserNotFoundException(
+                        "User" + dto.getUsername() + " not found"));
+
+        userRepository.delete(user);
     }
 }

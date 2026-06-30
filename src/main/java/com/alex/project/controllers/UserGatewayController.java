@@ -2,18 +2,19 @@ package com.alex.project.controllers;
 
 import com.alex.project.clients.UserServiceClient;
 import com.alex.project.dtos.user.FieldDto;
-import com.alex.project.dtos.user.SearchUser;
+import com.alex.project.dtos.user.ProfileLookupRequest;
 import com.alex.project.dtos.user.SpecialtyDto;
 import com.alex.project.dtos.user.UserUpdateRequestDto;
 import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;
-import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 @Path("/user")
@@ -25,18 +26,20 @@ public class UserGatewayController {
     @RestClient
     UserServiceClient client;
 
+    @Inject
+    JsonWebToken jwt;
+
     @POST
     @Path("/profiles/get")
-    public Uni<Response> getProfile(@Valid SearchUser search) {
-        return client.getProfile(search.email(), 0L)
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+    public Uni<Response> getProfile(@Valid ProfileLookupRequest request) {
+        long requesterId = Long.parseLong(jwt.getClaim("userid").toString());
+        return client.getProfileById(requesterId, request.userId());
     }
 
     @GET
     @Path("/{userId}/verification-status")
     public Uni<Response> getVerificationStatus(@PathParam("userId") Long userId) {
-        return client.getVerificationStatus(userId)
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return client.getVerificationStatus(userId);
     }
 
     @PUT
@@ -44,67 +47,58 @@ public class UserGatewayController {
     public Uni<Response> submitUpdateRequest(
             @PathParam("userId") Long userId,
             @Valid UserUpdateRequestDto request) {
-        return client.submitUpdateRequest(userId, request)
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return client.submitUpdateRequest(userId, request);
     }
 
     @GET
     @Path("/departments")
     public Uni<Response> getAllDepartments() {
-        return client.getAllDepartments()
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return client.getAllDepartments();
     }
 
     @GET
     @Path("/graduation-groups")
     public Uni<Response> getAllGraduationGroups() {
-        return client.getAllGraduationGroups()
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return client.getAllGraduationGroups();
     }
 
     @GET
     @Path("/field/all")
     public Uni<Response> getAllFields() {
-        return client.getAllFields()
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return client.getAllFields();
     }
 
     @POST
     @Path("/field/new")
     @RolesAllowed("ADMIN")
     public Uni<Response> addNewField(@Valid FieldDto dto) {
-        return client.addNewField(dto)
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return client.addNewField(dto);
     }
 
     @DELETE
-    @Path("/field/{id}")
+    @Path("/field")
     @RolesAllowed("ADMIN")
-    public Uni<Response> deleteField(@PathParam("id") Long id) {
-        return client.deleteField(id)
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+    public Uni<Response> deleteField(@NotBlank String code) {
+        return client.deleteField(code);
     }
 
     @GET
     @Path("/specialty/all")
     public Uni<Response> getAllSpecialty() {
-        return client.getAllSpecialty()
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return client.getAllSpecialty();
     }
 
     @POST
     @Path("/specialty/new")
     @RolesAllowed("ADMIN")
     public Uni<Response> addNewSpecialty(@Valid SpecialtyDto dto) {
-        return client.addNewSpecialty(dto)
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return client.addNewSpecialty(dto);
     }
 
     @DELETE
     @Path("/specialty/{id}")
     @RolesAllowed("ADMIN")
     public Uni<Response> deleteSpecialty(@PathParam("id") Long id) {
-        return client.deleteSpecialty(id)
-                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return client.deleteSpecialty(id);
     }
 }
